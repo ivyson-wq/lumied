@@ -19,32 +19,19 @@ jobs:
       - name: Trigger ticket_resolver_if_needed()
         run: |
           set -euo pipefail
-          API="https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query"
-          AUTH="Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}"
-          CT="Content-Type: application/json"
-
-          RESULT=$(curl -sf -X POST "$API" \
-            -H "$AUTH" -H "$CT" \
-            -d '{"query":"SELECT public.ticket_resolver_if_needed()"}')
-
-          echo "Resultado: $RESULT"
+          curl -sf -X POST \
+            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"SELECT public.ticket_resolver_if_needed()"}' \
+            | jq .
 
       - name: Listar tickets abertos (diagnóstico)
         run: |
           set -euo pipefail
-          API="https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query"
-          AUTH="Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}"
-          CT="Content-Type: application/json"
-
-          curl -sf -X POST "$API" \
-            -H "$AUTH" -H "$CT" \
+          curl -sf -X POST \
+            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
             -d '{"query":"SELECT numero, email, portal, tipo, LEFT(descricao,80) AS descricao_resumo, status, criado_em FROM tickets ORDER BY criado_em DESC LIMIT 20"}' \
-            | python3 -c "
-import json, sys
-rows = json.load(sys.stdin)
-if not rows:
-    print('Nenhum ticket.')
-else:
-    for r in rows:
-        print(f\"#{r.get(\\\"numero\\\")} [{r.get(\\\"status\\\")}] {r.get(\\\"portal\\\")} | {r.get(\\\"email\\\")} | {r.get(\\\"descricao_resumo\\\")}\")
-"
+            | jq -r 'if length == 0 then "Nenhum ticket." else .[] | "#\(.numero) [\(.status)] \(.portal) | \(.email) | \(.descricao_resumo)" end'

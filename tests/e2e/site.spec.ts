@@ -28,14 +28,15 @@ test.describe('Site Lumied', () => {
     await expect(cards).toHaveCount(6);
   });
 
-  test('pricing cards renderizam (5 tiers v2)', async ({ page }) => {
+  test('pricing cards renderizam (3 tiers atual)', async ({ page }) => {
     await page.goto('/site/');
     await page.evaluate(() => window.scrollTo(0, 7000));
     await page.waitForTimeout(1000);
-    // Redesign v2 (2026-04-03): 5 tiers (Starter, Gestão, Automação, Avançado, Rede)
+    // Tiers atuais (2026-05): Starter (R$ 790), Essencial, Prestige.
+    // Antes eram 5 tiers; v3 consolidou em 3 ([[project_tier_starter.md]]).
     const cards = page.locator('.plan-card, .pricing-card');
     const count = await cards.count();
-    expect(count).toBeGreaterThanOrEqual(4);
+    expect(count).toBeGreaterThanOrEqual(3);
   });
 
   test('plano featured é destacado', async ({ page }) => {
