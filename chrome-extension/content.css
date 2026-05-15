@@ -65,6 +65,17 @@
   letter-spacing: -0.2px;
   box-shadow: 0 2px 8px rgba(45,27,78,.3);
 }
+.mb-version-badge {
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(252,211,77,.22);
+  color: #fcd34d;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: 0.4px;
+  border: 1px solid rgba(252,211,77,.4);
+}
 .mb-panel-header .mb-close-btn {
   margin-left: auto;
   background: rgba(255,255,255,.12);
@@ -411,10 +422,15 @@
   gap: 2px;
   transition: all .15s;
 }
-.mb-qa-btn:hover {
+.mb-qa-btn:hover:not(:disabled) {
   background: #f8f5ff;
   border-color: #b8a4dc;
   transform: translateY(-1px);
+}
+.mb-qa-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f3f4f6;
 }
 .mb-qa-btn span {
   font-size: 16px;
