@@ -13,10 +13,9 @@
 //  Retorno: { ok: true, afd_content: "..." } | { ok: false, error: "..." }
 // ═══════════════════════════════════════════════════════════════
 
-import { Agent, fetch as undiciFetch } from "undici";
+import { tolerantFetch, type TolerantResponse } from "./http-tolerant.js";
 import { log } from "./log.js";
 
-const insecureAgent = new Agent({ connect: { rejectUnauthorized: false } });
 const TIMEOUT_MS = 25_000;
 
 export interface AfdPullPayload {
@@ -30,6 +29,8 @@ export interface AfdPullPayload {
   url_afd_template: string;     // path com {DATAINI}/{DATAFIM}
   dataini: string;              // DDMMAAAA
   datafim: string;              // DDMMAAAA
+  http_method?: "GET" | "POST"; // default GET; iDFace exige POST em /get_afd.fcgi
+  http_body?: string;           // body literal pra POST (default "{}")
 }
 
 function baseUrl(p: AfdPullPayload): string {
@@ -45,18 +46,8 @@ function appendSession(path: string, session: string): string {
   return `${path}${sep}session=${session}`;
 }
 
-async function fetchTimeout(url: string, init: any = {}): Promise<Response> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-  try {
-    return await undiciFetch(url, {
-      ...init,
-      dispatcher: insecureAgent,
-      signal: ctrl.signal,
-    }) as unknown as Response;
-  } finally {
-    clearTimeout(timer);
-  }
+async function fetchTimeout(url: string, init: any = {}): Promise<TolerantResponse> {
+  return tolerantFetch(url, init, TIMEOUT_MS);
 }
 
 /** Modo Control iD: POST /login.fcgi {login, password} → session string */
@@ -130,7 +121,15 @@ export async function execAfdPull(p: AfdPullPayload): Promise<{ ok: boolean; afd
     }
 
     const url = `${baseUrl(p)}${afdPath}`;
-    const res = await fetchTimeout(url, { method: "GET", headers });
+    // Control iD iDFace exige POST no /get_afd.fcgi; demais modos usam GET por padrão.
+    const defaultMethod = p.auth_modo === "controlid_session" ? "POST" : "GET";
+    const method = (p.http_method || defaultMethod).toUpperCase();
+    const init: any = { method, headers };
+    if (method === "POST") {
+      init.body = p.http_body ?? "{}";
+      if (!headers["Content-Type"]) headers["Content-Type"] = "application/json";
+    }
+    const res = await fetchTimeout(url, init);
     if (!res.ok) {
       return { ok: false, error: `download HTTP ${res.status}` };
     }
@@ -138,16 +137,16 @@ export async function execAfdPull(p: AfdPullPayload): Promise<{ ok: boolean; afd
     if (!text || text.length < 30) {
       return { ok: false, error: `resposta vazia ou inválida (${text.length} bytes)` };
     }
-    // Heurística: AFD começa com "1" (header) ou pelo menos tem linhas que começam com "3" (eventos)
-    const lines = text.split(/\r?\n/).filter((l) => l.trim());
-    const hasHeader = lines.some((l) => l.startsWith("1"));
-    const hasEvents = lines.some((l) => l.startsWith("3"));
-    if (!hasHeader && !hasEvents) {
-      // Pode ser HTML de erro disfarçado de 200
+    // Barra apenas HTML/JSON de erro disfarçado de 200 — o parser do edge `ponto`
+    // valida o conteúdo AFD em si. Aceita tanto layout 1510 (linhas começando com tipo)
+    // quanto MR/Portaria 671 do iDFace (NSR zerado-à-esquerda antes do tipo, sem CRLF).
+    const head = text.slice(0, 200).trimStart().toLowerCase();
+    if (head.startsWith("<!doctype") || head.startsWith("<html") || head.startsWith("{\"error") || head.startsWith("{\"message")) {
       const snippet = text.slice(0, 200).replace(/\s+/g, " ");
       return { ok: false, error: `resposta não parece AFD: "${snippet}…"` };
     }
-    log.info(`✓ afd_pull baixou ${lines.length} linhas (${text.length} bytes)`);
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    log.info(`✓ afd_pull baixou ${lines.length} linha(s) (${text.length} bytes)`);
     return { ok: true, afd_content: text };
   } catch (e: any) {
     const msg = e?.message || String(e);
