@@ -1397,6 +1397,13 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
       .eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
     if (!chamado) return err("Chamado não encontrado.", 404);
     if (chamado.status === "rejeitada") return err("Chamado rejeitado não pode pedir material.");
+    // Dedup: rejeita reenvio idêntico em janela de 60s (double-click / retry)
+    const cutoff = new Date(Date.now() - 60_000).toISOString();
+    const { data: recent } = await admin.from("alm_compras")
+      .select("id").eq("escola_id", sessionEscolaId)
+      .eq("origem", "manutencao").eq("origem_id", id)
+      .gte("encaminhado_em", cutoff).limit(1);
+    if (recent?.length) return err("Solicitação duplicada — aguarde alguns segundos antes de reenviar.", 409);
     // Lê teto do financeiro (default 300 se config ausente)
     const { data: cfgRow } = await admin.from("escola_config")
       .select("valor").eq("escola_id", sessionEscolaId).eq("chave", "compra_limite_gerente").maybeSingle();

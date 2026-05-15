@@ -62,17 +62,24 @@ Deno.serve(async (req) => {
       ? await getBancoConfigByCnpj(sb, banco, cnpjBenef)
       : null
 
-    // Fallback: se não tem CNPJ no payload (Inter antigo), pega 1ª config ativa
-    // (single-tenant Maple por enquanto). Sicredi/BB sempre vêm com CNPJ.
+    // Fallback: se não tem CNPJ no payload (Inter antigo), aceita só se
+    // houver EXATAMENTE 1 config ativa pra esse banco (deploy single-tenant).
+    // Em multi-tenant, recusa: anti-padrão do incidente 16/04/2026
+    // ([[project_tenant_isolation_incident]]).
     if (!config) {
-      const { data: fallback } = await sb.from('escola_banco_config')
-        .select('*')
+      const { data: ativas, count } = await sb.from('escola_banco_config')
+        .select('*', { count: 'exact' })
         .eq('banco', banco)
         .eq('ativo', true)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle()
-      config = fallback as any
+      if (count === 1 && ativas && ativas.length === 1) {
+        config = ativas[0] as any
+        console.warn(`[bank-webhook] ${banco} sem CNPJ no payload — usando única config ativa (single-tenant).`)
+      } else if (count && count > 1) {
+        console.error(`[bank-webhook] ${banco} sem CNPJ em multi-tenant (${count} configs ativas). Recusando.`)
+        return new Response(JSON.stringify({ error: 'Payload sem identificação de escola (CNPJ ausente em multi-tenant).' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     if (!config) {

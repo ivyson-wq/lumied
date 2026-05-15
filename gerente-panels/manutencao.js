@@ -211,15 +211,25 @@
       </div>`;
     }).join('') + `<div style="text-align:right;font-weight:600;padding:8px 0;font-size:13px;">Total estimado: R$ ${total.toFixed(2)}</div>`;
   }
+  var manutMaterialEnviando = false;
   async function enviarManutMaterial() {
     if (!manutMaterialItens.length) { showToast('Adicione ao menos um item.', 'error'); return; }
-    const d = await api({ action: 'manutencao_solicitar_material', id: manutMaterialChamadoId, itens: manutMaterialItens });
-    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
-    const aviso = d.criados > 0 ? `${d.criados} item(ns) enviado(s) ao almoxarifado.` : 'Solicitação enviada.';
-    showToast(aviso, 'success');
-    fecharManutMaterial();
-    if (manutMaterialChamadoId) loadManutMaterialBox(manutMaterialChamadoId);
-    loadManutPanel();
+    if (manutMaterialEnviando) return;
+    manutMaterialEnviando = true;
+    const btn = document.querySelector('#manutMaterialOverlay .btn-aprovar[onclick*="enviarManutMaterial"]');
+    if (btn) { btn.disabled = true; btn.style.opacity = '.6'; btn.style.cursor = 'wait'; btn.textContent = 'Enviando...'; }
+    try {
+      const d = await api({ action: 'manutencao_solicitar_material', id: manutMaterialChamadoId, itens: manutMaterialItens });
+      if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+      const aviso = d.criados > 0 ? `${d.criados} item(ns) enviado(s) ao almoxarifado.` : 'Solicitação enviada.';
+      showToast(aviso, 'success');
+      fecharManutMaterial();
+      if (manutMaterialChamadoId) loadManutMaterialBox(manutMaterialChamadoId);
+      loadManutPanel();
+    } finally {
+      manutMaterialEnviando = false;
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; btn.textContent = '✓ Enviar para compras'; }
+    }
   }
   function closeManutModal() { document.getElementById('manutModalOverlay').classList.remove('show'); }
   async function updateManutStatus(id, status) {

@@ -1201,7 +1201,7 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       const data: Record<string, unknown> = { nome, descricao, unidade, estoque_qty, preco, categoria, unidade_compra: unidade_compra || null, qtd_por_embalagem: qtd_por_embalagem || 1, localizacao: localizacao || null }
       if (id) {
         // Se o gerente editou o preço manualmente, marcar como 'manual' para não sobrescrever na atualização automática
-        const { data: old } = await sb.from('alm_insumos').select('preco').eq('id', id).maybeSingle()
+        const { data: old } = await sb.from('alm_insumos').select('preco').eq('id', id).eq('escola_id', (gerente as any).escola_id).maybeSingle()
         if (old && preco != null && Number(preco) !== Number(old.preco)) {
           data.referencia_fonte = 'manual'
           data.preco_atualizado_em = new Date().toISOString()
@@ -1229,11 +1229,11 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
       // Check if used in any requisition items (JSONB array) or purchases
-      const { data: compras } = await sb.from('alm_compras').select('id').eq('insumo_id', id).limit(1)
+      const { data: compras } = await sb.from('alm_compras').select('id').eq('insumo_id', id).eq('escola_id', (gerente as any).escola_id).limit(1)
       if (compras && compras.length > 0) {
         return json({ error: 'Este insumo está vinculado a compras e não pode ser excluído. Use "Desativar" em vez disso.' }, 400)
       }
-      const { data: movs } = await sb.from('alm_movimentacoes').select('id').eq('insumo_id', id).limit(1)
+      const { data: movs } = await sb.from('alm_movimentacoes').select('id').eq('insumo_id', id).eq('escola_id', (gerente as any).escola_id).limit(1)
       if (movs && movs.length > 0) {
         return json({ error: 'Este insumo possui movimentações de estoque e não pode ser excluído. Use "Desativar" em vez disso.' }, 400)
       }
@@ -1262,7 +1262,7 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       if (!id || preco == null) return json({ error: 'id e preco obrigatorios.' }, 400)
 
       // Busca insumo atual
-      const { data: ins } = await sb.from('alm_insumos').select('*').eq('id', id).maybeSingle()
+      const { data: ins } = await sb.from('alm_insumos').select('*').eq('id', id).eq('escola_id', (gerente as any).escola_id).maybeSingle()
       if (!ins) return json({ error: 'Insumo nao encontrado.' }, 404)
 
       // Tenta extrair embalagem do nome do produto encontrado
@@ -1304,6 +1304,7 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       // Salva historico
       await sb.from('alm_insumo_historico').insert({
         insumo_id: id,
+        escola_id: (gerente as any).escola_id,
         preco_anterior: ins.preco,
         preco_novo: preco,
         unidade_compra_anterior: ins.unidade_compra,
@@ -1334,7 +1335,8 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       const { id } = body
       if (!id) return json({ error: 'ID obrigatorio.' }, 400)
       const { data } = await sb.from('alm_insumo_historico').select('*')
-        .eq('insumo_id', id).order('criado_em', { ascending: false }).limit(20)
+        .eq('insumo_id', id).eq('escola_id', (gerente as any).escola_id)
+        .order('criado_em', { ascending: false }).limit(20)
       return json({ data: data ?? [] })
     }
 
@@ -1343,7 +1345,7 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       const { id, qty, preco, fonte, nNF, produto_nome } = body
       if (!id || qty == null) return json({ error: 'id e qty obrigatorios.' }, 400)
 
-      const { data: ins } = await sb.from('alm_insumos').select('*').eq('id', id).maybeSingle()
+      const { data: ins } = await sb.from('alm_insumos').select('*').eq('id', id).eq('escola_id', (gerente as any).escola_id).maybeSingle()
       if (!ins) return json({ error: 'Insumo nao encontrado.' }, 404)
 
       const novoEstoque = (ins.estoque_qty || 0) + parseFloat(qty)
@@ -1354,6 +1356,7 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
         // Salva historico de preco
         await sb.from('alm_insumo_historico').insert({
           insumo_id: id,
+          escola_id: (gerente as any).escola_id,
           preco_anterior: ins.preco,
           preco_novo: preco,
           unidade_compra_anterior: ins.unidade_compra,
