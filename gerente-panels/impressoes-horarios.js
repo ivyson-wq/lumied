@@ -268,8 +268,94 @@
     loadImpressoesGerente();
   }
 
+  // ── Aba Benchmark de Impressões ──────────────────────────
+  // 3 camadas: histórico próprio (mediana 3m), peers do mesmo nível etário,
+  // faixa de mercado por aluno. Bloqueia exibição se turma sem alunos cadastrados.
+  async function renderImpBenchmark(el) {
+    el.innerHTML = '<div class="empty-state">Carregando benchmark...</div>';
+    const mes = new Date().toISOString().slice(0, 7);
+    const d = await api({ action: 'impressoes_benchmark', mes });
+    if (d && d.error) { el.innerHTML = '<div class="empty-state">Erro: ' + esc(d.error) + '</div>'; return; }
+    const turmas = (d && d.turmas) || [];
+    if (!turmas.length) { el.innerHTML = '<div class="empty-state">Nenhuma turma ativa.</div>'; return; }
+
+    // Header + legenda
+    const semCadastro = turmas.filter(t => t.alunos_cadastrados === 0).length;
+    let html = `
+      <div style="background:#fff8e1;border:1px solid #f6d365;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#7a5a00;">
+        <strong>📈 Benchmark de impressões — ${mes}</strong><br>
+        Comparativo em 3 camadas: <strong>histórico</strong> da turma, <strong>peers</strong> do mesmo nível etário e <strong>faixa de mercado</strong> (folhas/aluno/mês esperado pra escolas bilíngues de qualidade equivalente).
+        ${semCadastro > 0 ? `<br>⚠ ${semCadastro} turma(s) sem alunos cadastrados — complete o cadastro pra ver o benchmark por aluno.` : ''}
+      </div>`;
+
+    // Agrupa por nível
+    const niveis = {};
+    for (const t of turmas) {
+      const k = t.nivel_label || 'Outras';
+      if (!niveis[k]) niveis[k] = [];
+      niveis[k].push(t);
+    }
+    const ordemNiveis = ['Toddler (1-3 anos)','Nursery / Pre-K','Junior Kindergarten','Senior Kindergarten','Year 1-3 (alfabetização bilíngue)','Year 4-5','Outras (sem faixa)'];
+
+    for (const niv of ordemNiveis) {
+      const lista = niveis[niv]; if (!lista) continue;
+      html += `<div style="font-size:13px;font-weight:700;margin:18px 0 8px;padding:6px 12px;background:#f5f0ea;border-radius:8px;">${esc(niv)} <span style="font-weight:400;color:var(--muted);font-size:11px;">(${lista.length} turma${lista.length>1?'s':''})</span></div>`;
+      html += lista.map(t => renderTurmaBenchCard(t)).join('');
+    }
+    el.innerHTML = html;
+  }
+
+  function renderTurmaBenchCard(t) {
+    // BLOQUEANTE: turma sem alunos cadastrados
+    if (t.alunos_cadastrados === 0) {
+      return `<div style="background:#fff;border:1.5px dashed #e5e1da;border-radius:10px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:13px;">${esc(t.turma_nome)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">📋 Sem alunos cadastrados — não dá pra calcular benchmark por aluno.</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);">Folhas no mês: <strong style="color:var(--text);">${t.folhas_mes_atual}</strong></div>
+        <button onclick="showPanel('alunos')" style="padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Cadastrar alunos →</button>
+      </div>`;
+    }
+
+    const cor = t.outlier ? '#e53e3e' : (t.delta_pct_vs_historico > 30 ? '#b07d00' : '#2d7a3a');
+    const folhasPorAluno = t.alunos_cadastrados > 0 ? (t.folhas_mes_atual / t.alunos_cadastrados).toFixed(1) : '—';
+    const histTxt = t.historico_mediana_3m != null
+      ? `<span style="color:var(--muted);">vs histórico:</span> <strong>${t.historico_mediana_3m}</strong>${t.delta_pct_vs_historico != null ? ` <span style="color:${t.delta_pct_vs_historico>0?'#b07d00':'#2d7a3a'};font-weight:600;">(${t.delta_pct_vs_historico>0?'+':''}${t.delta_pct_vs_historico}%)</span>` : ''}`
+      : '<span style="color:var(--muted);">sem histórico anterior</span>';
+    const peersTxt = t.peers_mediana_nivel != null
+      ? `<span style="color:var(--muted);">peers do mesmo nível:</span> <strong>${t.peers_mediana_nivel}</strong>`
+      : '';
+    const benchTxt = t.benchmark_min != null && t.benchmark_max != null
+      ? `<span style="color:var(--muted);">faixa esperada:</span> <strong>${t.benchmark_min}–${t.benchmark_max}</strong>`
+      : '<span style="color:var(--muted);">faixa não aplicável</span>';
+
+    return `<div style="background:#fff;border:1.5px solid ${t.outlier ? '#fecaca' : 'var(--border)'};border-radius:10px;padding:14px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div style="font-weight:600;font-size:14px;">${esc(t.turma_nome)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${t.alunos_cadastrados} aluno${t.alunos_cadastrados>1?'s':''} · ${folhasPorAluno} folhas/aluno</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:22px;font-weight:700;color:${cor};line-height:1;">${t.folhas_mes_atual}</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">folhas no mês</div>
+        </div>
+      </div>
+      ${t.outlier ? `<div style="background:#fef2f2;border-left:3px solid #e53e3e;padding:6px 10px;font-size:11px;color:#991b1b;margin-top:8px;border-radius:4px;">⚠ ${esc(t.outlier_motivo || 'Outlier detectado')}</div>` : ''}
+      <div style="margin-top:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-size:12px;">
+        <div style="background:#fafaf8;padding:8px 10px;border-radius:6px;">${histTxt}</div>
+        ${peersTxt ? `<div style="background:#fafaf8;padding:8px 10px;border-radius:6px;">${peersTxt}</div>` : ''}
+        <div style="background:#fafaf8;padding:8px 10px;border-radius:6px;">${benchTxt}</div>
+      </div>
+    </div>`;
+  }
+
   async function loadImpressoesGerente() {
     const el = document.getElementById('impGerenteContent');
+    if (impGerenteFilter === 'benchmark') {
+      await renderImpBenchmark(el);
+      return;
+    }
     if (impGerenteFilter === 'orcamento') {
       const d = await api({ action: 'impressoes_orcamento_list', mes: new Date().toISOString().slice(0,7) });
       const turmas = Array.isArray(d) ? d : [];

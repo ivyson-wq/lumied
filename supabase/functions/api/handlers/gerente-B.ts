@@ -1768,6 +1768,140 @@ export async function handle(ctx: GerenteCtx): Promise<Response | null> {
     await admin.from("impressoes_orcamento").upsert({ escola_id: sessionEscolaId, turma_id, mes, limite: parseInt(limite) || 50 }, { onConflict: "turma_id,mes" });
     return ok({ success: true });
   }
+  // Benchmark de impressões por turma — 3 camadas (histórico próprio, peers
+  // do mesmo nível etário, faixa de mercado). Frontend mostra "exige cadastro
+  // de alunos" quando turma tem alunos_cadastrados=0 (decisão do usuário).
+  if (action === "impressoes_benchmark") {
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    // Mês atual + 3 anteriores
+    const mesAtualStart = mes + "-01";
+    const mesD = new Date(mes + "-01T00:00:00Z");
+    const tresMesesAtrasD = new Date(mesD); tresMesesAtrasD.setUTCMonth(mesD.getUTCMonth() - 3);
+    const tresMesesAtras = tresMesesAtrasD.toISOString().slice(0, 7) + "-01";
+
+    type Nivel = "toddler" | "nursery" | "jk" | "sk" | "year_1_3" | "year_4_5" | "outras";
+    // Faixa esperada de folhas/aluno/mês por nível (heurística de mercado + experiência setorial).
+    // Bilíngue tende ao topo. Educação infantil é menor (atividade visual). Year 1-3 = pico (alfabetização em 2 idiomas).
+    const FAIXA: Record<Nivel, { min: number; max: number; label: string }> = {
+      toddler:   { min: 8,  max: 15, label: "Toddler (1-3 anos)" },
+      nursery:   { min: 10, max: 18, label: "Nursery / Pre-K" },
+      jk:        { min: 12, max: 22, label: "Junior Kindergarten" },
+      sk:        { min: 12, max: 22, label: "Senior Kindergarten" },
+      year_1_3:  { min: 20, max: 35, label: "Year 1-3 (alfabetização bilíngue)" },
+      year_4_5:  { min: 15, max: 25, label: "Year 4-5" },
+      outras:    { min: 0,  max: 0,  label: "Outras (sem faixa)" },
+    };
+    function classificar(nome: string): Nivel {
+      const n = (nome || "").toLowerCase();
+      if (/toddler/.test(n)) return "toddler";
+      if (/nursery|bear care/.test(n)) return "nursery";
+      if (/junior\s*kind|\bjk\b/.test(n)) return "jk";
+      if (/senior\s*kind|\bsk\b/.test(n)) return "sk";
+      if (/year\s*[123]\b|\b[123][oº]?\s*ano/.test(n)) return "year_1_3";
+      if (/year\s*[45]\b|\b[45][oº]?\s*ano/.test(n)) return "year_4_5";
+      return "outras";
+    }
+
+    // 1. Turmas ativas + contagem de alunos
+    const { data: turmasRaw } = await admin.from("series")
+      .select("id, nome").eq("escola_id", sessionEscolaId).eq("ativo", true).order("nome");
+    const turmas = turmasRaw ?? [];
+    const turmaIds = turmas.map((t: any) => t.id);
+
+    const { data: alunosCounts } = await admin.from("alunos")
+      .select("serie_id").eq("escola_id", sessionEscolaId).eq("ativo", true).in("serie_id", turmaIds);
+    const alunosByTurma: Record<string, number> = {};
+    for (const a of (alunosCounts as Array<{ serie_id: string }> | null) ?? []) {
+      alunosByTurma[a.serie_id] = (alunosByTurma[a.serie_id] || 0) + 1;
+    }
+
+    // 2. Folhas por turma — mês atual + 3 anteriores (status que conta consumo real)
+    const STATUS_CONTA = ["pendente", "aprovado", "impresso", "entregue"];
+    const { data: histRaw } = await admin.from("impressoes")
+      .select("turma_id, copias, num_paginas, criado_em")
+      .eq("escola_id", sessionEscolaId)
+      .gte("criado_em", tresMesesAtras)
+      .in("status", STATUS_CONTA);
+    const hist = (histRaw as Array<Record<string, unknown>>) ?? [];
+    const folhasByTurmaMes: Record<string, Record<string, number>> = {};
+    for (const r of hist) {
+      const tid = r.turma_id as string;
+      if (!tid) continue;
+      const folhas = (Number(r.copias) || 1) * (Number(r.num_paginas) || 1);
+      const m = (r.criado_em as string).slice(0, 7);
+      if (!folhasByTurmaMes[tid]) folhasByTurmaMes[tid] = {};
+      folhasByTurmaMes[tid][m] = (folhasByTurmaMes[tid][m] || 0) + folhas;
+    }
+
+    // 3. Calcula linhas por turma (folhas atual, histórica, etc)
+    const linhasPreliminares = turmas.map((t: any) => {
+      const nivel = classificar(t.nome);
+      const alunos = alunosByTurma[t.id] || 0;
+      const meses = folhasByTurmaMes[t.id] || {};
+      const folhasAtual = meses[mes] || 0;
+      // Mediana das últimas 3 (excluindo mês atual)
+      const valoresHist = Object.entries(meses)
+        .filter(([m, _]) => m < mes)
+        .map(([_, v]) => v)
+        .sort((a, b) => a - b);
+      const histMediana = valoresHist.length ? valoresHist[Math.floor(valoresHist.length / 2)] : null;
+      const faixa = FAIXA[nivel];
+      const benchMin = alunos > 0 && faixa.max > 0 ? alunos * faixa.min : null;
+      const benchMax = alunos > 0 && faixa.max > 0 ? alunos * faixa.max : null;
+      return {
+        turma_id: t.id,
+        turma_nome: t.nome,
+        nivel,
+        nivel_label: faixa.label,
+        alunos_cadastrados: alunos,
+        folhas_mes_atual: folhasAtual,
+        historico_mediana_3m: histMediana,
+        delta_pct_vs_historico: (histMediana && histMediana > 0)
+          ? Math.round(((folhasAtual - histMediana) / histMediana) * 100)
+          : null,
+        benchmark_min: benchMin,
+        benchmark_max: benchMax,
+        benchmark_label: faixa.label,
+      };
+    });
+
+    // 4. Mediana de peers por nível (do próprio mês atual)
+    const peersByNivel: Record<string, number[]> = {};
+    for (const r of linhasPreliminares) {
+      if (r.nivel === "outras") continue;
+      if (!peersByNivel[r.nivel]) peersByNivel[r.nivel] = [];
+      peersByNivel[r.nivel].push(r.folhas_mes_atual);
+    }
+    const medianaByNivel: Record<string, number> = {};
+    for (const [niv, arr] of Object.entries(peersByNivel)) {
+      const sorted = arr.slice().sort((a, b) => a - b);
+      medianaByNivel[niv] = sorted[Math.floor(sorted.length / 2)] || 0;
+    }
+
+    // 5. Linhas finais com peers + outlier
+    const linhas = linhasPreliminares.map(r => {
+      const peersMed = r.nivel !== "outras" ? (medianaByNivel[r.nivel] ?? null) : null;
+      // Outlier: > 2× histórico próprio OU > 2× máximo do benchmark
+      const histOutlier = r.historico_mediana_3m && r.folhas_mes_atual > r.historico_mediana_3m * 2;
+      const benchOutlier = r.benchmark_max && r.folhas_mes_atual > r.benchmark_max * 2;
+      return {
+        ...r,
+        peers_mediana_nivel: peersMed,
+        outlier: !!(histOutlier || benchOutlier),
+        outlier_motivo: histOutlier
+          ? "Mais que o dobro da sua média histórica"
+          : benchOutlier
+          ? "Mais que o dobro do máximo esperado pra essa faixa etária"
+          : null,
+      };
+    });
+
+    return ok({
+      mes,
+      faixas_referencia: FAIXA,
+      turmas: linhas,
+    });
+  }
 
   // ── Horário de Acesso Professoras ────────────────────────
   if (action === "prof_horario_acesso_list") {
