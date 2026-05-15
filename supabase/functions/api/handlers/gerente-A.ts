@@ -1884,6 +1884,130 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     return ok({ success: true, dismissed_until: until });
   }
 
+  // ═══════════════════════════════════════════════════════════
+  //  LAP — Setup Wizard (Sprint 6 do programa)
+  //  Estado em escola_config (chaves lap_wizard_*).
+  // ═══════════════════════════════════════════════════════════
+  if (action === "lap_wizard_state") {
+    const { data: rows } = await admin.from("escola_config")
+      .select("chave, valor")
+      .eq("escola_id", sessionEscolaId)
+      .in("chave", ["lap_wizard_completed", "lap_wizard_answers", "lap_wizard_skipped_until"]);
+    const map: Record<string, unknown> = {};
+    for (const r of (rows ?? []) as Array<{ chave: string; valor: unknown }>) {
+      map[r.chave] = r.valor;
+    }
+    return ok({
+      completed: map.lap_wizard_completed === true || map.lap_wizard_completed === "true",
+      skipped_until: map.lap_wizard_skipped_until ?? null,
+      answers: map.lap_wizard_answers ?? {},
+    });
+  }
+
+  if (action === "lap_wizard_save_step") {
+    const { step, value } = body as { step?: number; value?: Record<string, unknown> };
+    if (typeof step !== "number" || step < 1 || step > 5) return err("step inválido (1-5).");
+    if (!value || typeof value !== "object") return err("value obrigatório.");
+
+    // Lê resposta atual e faz merge
+    const { data: existing } = await admin.from("escola_config")
+      .select("valor")
+      .eq("escola_id", sessionEscolaId)
+      .eq("chave", "lap_wizard_answers")
+      .maybeSingle();
+    const current = (existing?.valor && typeof existing.valor === "object" && !Array.isArray(existing.valor))
+      ? existing.valor as Record<string, unknown>
+      : {};
+    const merged = { ...current, ...value };
+
+    await admin.from("escola_config").upsert({
+      escola_id: sessionEscolaId,
+      chave: "lap_wizard_answers",
+      valor: merged,
+      atualizado_em: new Date().toISOString(),
+    }, { onConflict: "chave,escola_id" });
+
+    // LAP: evento de passo concluído
+    try {
+      const { trackEvent } = await import("../../_shared/track.ts");
+      trackEvent(admin, {
+        escola_id: sessionEscolaId,
+        user_id: gerente.id,
+        event_name: "onboarding.wizard.passo_concluido",
+        module: "onboarding",
+        persona: "diretor",
+        payload: { step, keys: Object.keys(value) },
+        idempotency_key: `wizard-passo:${sessionEscolaId}:${step}`,
+      });
+    } catch (_) { /* silent */ }
+
+    return ok({ success: true, answers: merged });
+  }
+
+  if (action === "lap_wizard_complete") {
+    const startedRow = await admin.from("escola_config")
+      .select("atualizado_em")
+      .eq("escola_id", sessionEscolaId)
+      .eq("chave", "lap_wizard_answers")
+      .maybeSingle();
+    const startedAt = startedRow.data?.atualizado_em;
+
+    await admin.from("escola_config").upsert({
+      escola_id: sessionEscolaId,
+      chave: "lap_wizard_completed",
+      valor: true,
+      atualizado_em: new Date().toISOString(),
+    }, { onConflict: "chave,escola_id" });
+
+    // Limpa skip
+    await admin.from("escola_config").delete()
+      .eq("escola_id", sessionEscolaId)
+      .eq("chave", "lap_wizard_skipped_until");
+
+    try {
+      const { trackEvent } = await import("../../_shared/track.ts");
+      const duracaoSeg = startedAt
+        ? Math.floor((Date.now() - new Date(startedAt as string).getTime()) / 1000)
+        : null;
+      trackEvent(admin, {
+        escola_id: sessionEscolaId,
+        user_id: gerente.id,
+        event_name: "onboarding.wizard.finalizado",
+        module: "onboarding",
+        persona: "diretor",
+        payload: { duracao_seg: duracaoSeg },
+        idempotency_key: `wizard-final:${sessionEscolaId}`,
+      });
+    } catch (_) { /* silent */ }
+
+    return ok({ success: true });
+  }
+
+  if (action === "lap_wizard_skip") {
+    const { current_step } = body as { current_step?: number };
+    const skipUntil = new Date(Date.now() + 86400000).toISOString();
+    await admin.from("escola_config").upsert({
+      escola_id: sessionEscolaId,
+      chave: "lap_wizard_skipped_until",
+      valor: skipUntil,
+      atualizado_em: new Date().toISOString(),
+    }, { onConflict: "chave,escola_id" });
+
+    try {
+      const { trackEvent } = await import("../../_shared/track.ts");
+      trackEvent(admin, {
+        escola_id: sessionEscolaId,
+        user_id: gerente.id,
+        event_name: "onboarding.wizard.pulado",
+        module: "onboarding",
+        persona: "diretor",
+        payload: { passo_atual: current_step ?? null },
+      });
+    } catch (_) { /* silent */ }
+
+    return ok({ success: true, skipped_until: skipUntil });
+  }
+
   if (action === "lap_checklist_mark_done") {
     const { item_key } = body as { item_key?: string };
     if (!item_key || typeof item_key !== "string") return err("item_key obrigatório.");
