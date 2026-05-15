@@ -3913,7 +3913,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <div style="display:flex;gap:8px;align-items:center;">
             <select id="pontoDashMes" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select>
             <select id="pontoDashAno" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select>
-            <button onclick="loadPontoDash()" style="padding:8px 16px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">Atualizar</button>
+            <button onclick="loadPontoDash(this)" style="padding:8px 16px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">Atualizar</button>
           </div>
         </div>
         <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.5;">
@@ -3962,7 +3962,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>
           <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
             <button onclick="pontoToggleEmpForm()" style="padding:8px 16px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Cancelar</button>
-            <button class="btn-create" style="width:auto;padding:8px 20px;" onclick="pontoEmpSalvar()">Salvar</button>
+            <button class="btn-create" style="width:auto;padding:8px 20px;" onclick="pontoEmpSalvar(this)">Salvar</button>
           </div>
         </div>
 
@@ -4065,7 +4065,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
               <button onclick="pontoToggleRepForm()" style="padding:8px 16px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Cancelar</button>
               <button id="pontoRepTestBtn" onclick="pontoRepTestar()" style="padding:8px 16px;background:#fff;color:#1a6bb5;border:1px solid #1a6bb5;border-radius:8px;font-size:12px;cursor:pointer;">🧪 Testar agora (ontem)</button>
-              <button class="btn-create" style="width:auto;padding:8px 20px;" onclick="pontoRepSalvar()">Salvar</button>
+              <button class="btn-create" style="width:auto;padding:8px 20px;" onclick="pontoRepSalvar(this)">Salvar</button>
             </div>
             <div id="pontoRepFormStatus" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:12px;"></div>
           </div>
@@ -4137,7 +4137,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <div class="ff" style="margin:0;flex:1;min-width:220px;"><label>Funcionário</label><select id="pontoMirrorEmp" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"><option value="">Selecione…</option></select></div>
             <div class="ff" style="margin:0;width:120px;"><label>Mês</label><select id="pontoMirrorMes" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select></div>
             <div class="ff" style="margin:0;width:110px;"><label>Ano</label><select id="pontoMirrorAno" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select></div>
-            <button class="btn-create" style="width:auto;padding:9px 22px;" onclick="loadPontoMirror()">Gerar</button>
+            <button class="btn-create" style="width:auto;padding:9px 22px;" onclick="loadPontoMirror(this)">Gerar</button>
             <button onclick="pontoMirrorPrint()" style="padding:9px 14px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">🖨️ Imprimir</button>
           </div>
           <div id="pontoMirrorContent" style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:24px;min-height:200px;"><div class="empty-state">Selecione funcionário, mês e ano e clique em <strong>Gerar</strong>.</div></div>
@@ -4199,7 +4199,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <div class="ff" style="margin-top:8px;"><label>Descrição (opcional)</label><textarea id="pontoJustifDesc" rows="3" placeholder="Detalhes ou número do atestado…" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:#fdfbf8;"></textarea></div>
           <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
             <button onclick="pontoToggleJustifForm()" style="padding:8px 16px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Cancelar</button>
-            <button class="btn-create" style="width:auto;padding:8px 20px;" onclick="pontoJustifSalvar()">Salvar</button>
+            <button class="btn-create" style="width:auto;padding:8px 20px;" onclick="pontoJustifSalvar(this)">Salvar</button>
           </div>
         </div>
 
