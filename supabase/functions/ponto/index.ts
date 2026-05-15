@@ -268,15 +268,30 @@ router.on("ponto_afd_upload", authGerente, feat, async (ctx) => {
 
   const parsed = parseAfd(conteudo_afd);
 
-  // 1. Criar registro de importação
+  // 1a. Header obrigatório — periodo_inicio/periodo_fim em afd_imports são NOT NULL.
+  //     Sem header válido, derivamos o período dos eventos (se houver) ou abortamos.
+  let periodoInicio = parsed.header?.periodStart ?? null;
+  let periodoFim    = parsed.header?.periodEnd ?? null;
+  if ((!periodoInicio || !periodoFim) && parsed.events.length > 0) {
+    const dates = parsed.events.map(e => e.date).sort();
+    periodoInicio = periodoInicio || dates[0];
+    periodoFim    = periodoFim    || dates[dates.length - 1];
+  }
+  if (!periodoInicio || !periodoFim) {
+    throw new AppError("VALIDATION_FAILED",
+      "AFD inválido: cabeçalho (tipo 1) ausente e arquivo sem batidas para inferir o período. " +
+      (parsed.errors.length > 0 ? "Detalhes: " + parsed.errors.join("; ") : ""));
+  }
+
+  // 1b. Criar registro de importação
   const { data: importRec, error: impErr } = await ctx.sb.from("afd_imports").insert({
     escola_id: ctx.escola_id,
     importado_por: ctx.user?.nome ?? "sistema",
     nome_arquivo: nome_arquivo || "afd_upload.txt",
-    periodo_inicio: parsed.header?.periodStart,
-    periodo_fim: parsed.header?.periodEnd,
-    cnpj_empregador: parsed.header?.cnpj,
-    razao_social: parsed.header?.companyName,
+    periodo_inicio: periodoInicio,
+    periodo_fim: periodoFim,
+    cnpj_empregador: parsed.header?.cnpj ?? null,
+    razao_social: parsed.header?.companyName ?? null,
     total_eventos: parsed.events.length,
     total_funcionarios: parsed.employees.length,
     status: parsed.isValid ? "processando" : "erro",
