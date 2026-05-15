@@ -56,12 +56,15 @@ export function gerarToken(): string {
 }
 
 // ── Create session in a table ──
+// `meta` é opcional; quando vier com escola_id, emite product_event LAP
+// `auth.user.logged_in` (fire-and-forget, não bloqueia auth).
 export async function criarSessao(
   sb: SupabaseClient,
   table: string,
   userIdField: string,
   userId: string,
-  days = 7
+  days = 7,
+  meta?: { escola_id?: string | null; persona?: string }
 ): Promise<string> {
   const token = gerarToken();
   await sb.from(table).insert({
@@ -69,6 +72,23 @@ export async function criarSessao(
     token,
     expira_em: new Date(Date.now() + days * 86400000).toISOString(),
   });
+
+  // LAP: emite evento de login (cobertura de stakeholders no LHS)
+  if (meta?.escola_id) {
+    try {
+      const { trackEvent } = await import("./track.ts");
+      // Não aguarda — fire-and-forget pra não atrasar login
+      trackEvent(sb, {
+        escola_id: meta.escola_id,
+        user_id: userId,
+        event_name: "auth.user.logged_in",
+        module: "auth",
+        persona: meta.persona ?? "sistema",
+        payload: { sessao_table: table },
+      });
+    } catch (_) { /* silent */ }
+  }
+
   return token;
 }
 

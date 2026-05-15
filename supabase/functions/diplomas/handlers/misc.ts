@@ -548,7 +548,7 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       const tkn = randomToken()
       const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       if (cred.usuario_tipo === 'professora') {
-        const { data: p } = await sb.from('professoras').select('nome, email').eq('id', cred.usuario_id).maybeSingle()
+        const { data: p } = await sb.from('professoras').select('nome, email, escola_id').eq('id', cred.usuario_id).maybeSingle()
         if (!p) return json({ error: 'Professora não encontrada.', code: 'NOT_FOUND' }, 404)
         const { error: sErr } = await sb.from('professora_sessoes').insert({ professora_id: cred.usuario_id, token: tkn, expira_em: exp })
         if (sErr) {
@@ -556,8 +556,19 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
           return json({ error: 'Não foi possível criar a sessão.', code: 'AUTH_SESSION_FAILED' }, 500)
         }
         token = tkn; nome = p.nome; email = p.email
+        try {
+          const { trackEvent } = await import('../../_shared/track.ts')
+          trackEvent(sb, {
+            escola_id: (p as any).escola_id,
+            user_id: cred.usuario_id,
+            event_name: 'auth.user.logged_in',
+            module: 'auth',
+            persona: 'professora',
+            payload: { sessao_table: 'professora_sessoes', via: 'webauthn' },
+          })
+        } catch (_) { /* silent */ }
       } else if (cred.usuario_tipo === 'secretaria') {
-        const { data: s } = await sb.from('secretarias').select('nome, email').eq('id', cred.usuario_id).maybeSingle()
+        const { data: s } = await sb.from('secretarias').select('nome, email, escola_id').eq('id', cred.usuario_id).maybeSingle()
         if (!s) return json({ error: 'Secretária não encontrada.', code: 'NOT_FOUND' }, 404)
         const { error: sErr } = await sb.from('secretaria_sessoes').insert({ secretaria_id: cred.usuario_id, token: tkn, expira_em: exp })
         if (sErr) {
@@ -565,6 +576,17 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
           return json({ error: 'Não foi possível criar a sessão.', code: 'AUTH_SESSION_FAILED' }, 500)
         }
         token = tkn; nome = s.nome; email = s.email
+        try {
+          const { trackEvent } = await import('../../_shared/track.ts')
+          trackEvent(sb, {
+            escola_id: (s as any).escola_id,
+            user_id: cred.usuario_id,
+            event_name: 'auth.user.logged_in',
+            module: 'auth',
+            persona: 'secretaria',
+            payload: { sessao_table: 'secretaria_sessoes', via: 'webauthn' },
+          })
+        } catch (_) { /* silent */ }
       }
       return json({ token, nome, email })
     } catch (e) { return json({ error: 'Verificação falhou: ' + (e as Error).message }, 400) }

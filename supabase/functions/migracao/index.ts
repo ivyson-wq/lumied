@@ -1092,6 +1092,35 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
   }).eq("id", job_id);
   staffAudit(ctx, job_id, escolaId, "promover", counts);
 
+  // LAP: marca onboarding ERP concluído + matrículas via import_erp
+  try {
+    const { trackEvents } = await import("../_shared/track.ts");
+    const evs: any[] = [{
+      escola_id: escolaId,
+      event_name: "onboarding.migracao_erp.promovida",
+      module: "onboarding",
+      persona: "staff_lumied",
+      payload: {
+        job_id,
+        promovido: counts,
+        erp_origem: (job as any).erp_origem ?? null,
+      },
+      idempotency_key: `mig-promov:${job_id}`,
+    }];
+    // Se promoveu alunos, conta como matrícula bulk via import (1 evento agregado)
+    if ((counts as any).alunos > 0) {
+      evs.push({
+        escola_id: escolaId,
+        event_name: "academico.aluno.matriculado",
+        module: "academico",
+        persona: "staff_lumied",
+        payload: { via: "import_erp", qtd: (counts as any).alunos, job_id },
+        idempotency_key: `mig-promov-alunos:${job_id}`,
+      });
+    }
+    trackEvents(ctx.sb, evs);
+  } catch (_) { /* silent */ }
+
   return successResponse({ ok: true, promovido: counts });
 });
 

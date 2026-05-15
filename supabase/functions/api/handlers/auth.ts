@@ -28,12 +28,32 @@ export async function setup(ctx: Context) {
 export async function login(ctx: Context) {
   const { email, senha } = ctx.body as any;
   if (!email || !senha) throw new AppError("VALIDATION_FAILED", "Email e senha obrigatórios.");
-  const { data: g } = await ctx.sb.from("gerentes").select("id, nome, email, senha_hash").eq("email", email).single();
+  const { data: g } = await ctx.sb.from("gerentes").select("id, nome, email, senha_hash, escola_id, papeis").eq("email", email).single();
   if (!g) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
   if (!(await verificarSenhaAuto(senha, g.senha_hash))) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
-  const token = await criarSessao(ctx.sb, "gerente_sessoes", "gerente_id", g.id);
+  const persona = inferPersonaFromPapeis((g as any).papeis) ?? "diretor";
+  const token = await criarSessao(ctx.sb, "gerente_sessoes", "gerente_id", g.id, 7, { escola_id: (g as any).escola_id, persona });
   log.info("Login", { user_id: g.id, action: "login" });
   return successResponse({ token, nome: g.nome, email: g.email });
+}
+
+// Mapeia papeis[] do usuário pra persona do LAP (mesma precedência da edge fn track-event)
+function inferPersonaFromPapeis(papeis: unknown): string | null {
+  if (!Array.isArray(papeis)) return null;
+  const set = new Set(papeis.map(String));
+  if (set.has("diretor")) return "diretor";
+  if (set.has("financeiro")) return "financeiro";
+  if (set.has("comercial")) return "comercial";
+  if (set.has("nutricionista")) return "nutricionista";
+  if (set.has("almoxarifado")) return "almoxarife";
+  if (set.has("manutencao")) return "manutencao";
+  if (set.has("impressao")) return "impressao";
+  if (set.has("coord_pedagogico")) return "coord_pedagogico";
+  if (set.has("professora_assistente")) return "professora_assistente";
+  if (set.has("professora")) return "professora";
+  if (set.has("secretaria")) return "secretaria";
+  if (set.has("gerente")) return "diretor";
+  return null;
 }
 
 export async function logout(ctx: Context) {
@@ -76,9 +96,10 @@ export async function webauthnLoginVerify(ctx: Context) {
   const portal = ch.portal || "gerente";
   let sessionData: any = {};
   if (portal === "gerente") {
-    const { data: g } = await ctx.sb.from("gerentes").select("id, nome, email").eq("email", ch.email).single();
+    const { data: g } = await ctx.sb.from("gerentes").select("id, nome, email, escola_id, papeis").eq("email", ch.email).single();
     if (!g) throw new AppError("NOT_FOUND", "Gerente não encontrado.");
-    const token = await criarSessao(ctx.sb, "gerente_sessoes", "gerente_id", g.id);
+    const persona = inferPersonaFromPapeis((g as any).papeis) ?? "diretor";
+    const token = await criarSessao(ctx.sb, "gerente_sessoes", "gerente_id", g.id, 7, { escola_id: (g as any).escola_id, persona });
     sessionData = { token, nome: g.nome, email: g.email, portal };
   }
   log.info("WebAuthn login", { action: "webauthn_login", metadata: { portal, email: ch.email } });

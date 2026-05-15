@@ -116,6 +116,20 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       console.error('[auth] professora_login AUTH_SESSION_FAILED', { email, err: psErr })
       return json({ error: 'Não foi possível criar a sessão.', code: 'AUTH_SESSION_FAILED' }, 500)
     }
+
+    // LAP: professora logada conta como stakeholder do LHS
+    try {
+      const { trackEvent } = await import('../../_shared/track.ts')
+      trackEvent(sb, {
+        escola_id: prof.escola_id,
+        user_id: prof.id,
+        event_name: 'auth.user.logged_in',
+        module: 'auth',
+        persona: 'professora',
+        payload: { sessao_table: 'professora_sessoes' },
+      })
+    } catch (_) { /* silent */ }
+
     return json({ token: tok, nome: prof.nome, email: prof.email })
   }
 
@@ -154,6 +168,20 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       console.error('[auth] secretaria_login AUTH_SESSION_FAILED', { email, err: ssErr })
       return json({ error: 'Não foi possível criar a sessão.', code: 'AUTH_SESSION_FAILED' }, 500)
     }
+
+    // LAP: secretaria logada conta como stakeholder do LHS
+    try {
+      const { trackEvent } = await import('../../_shared/track.ts')
+      trackEvent(sb, {
+        escola_id: sec.escola_id,
+        user_id: sec.id,
+        event_name: 'auth.user.logged_in',
+        module: 'auth',
+        persona: 'secretaria',
+        payload: { sessao_table: 'secretaria_sessoes' },
+      })
+    } catch (_) { /* silent */ }
+
     return json({ token: tok, nome: sec.nome, email: sec.email })
   }
 

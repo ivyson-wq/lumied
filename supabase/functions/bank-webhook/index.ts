@@ -174,6 +174,29 @@ async function processarBoletoPago(sb: any, event: WebhookEvent): Promise<void> 
     .eq('boleto_id', boleto.id)
 
   console.log(`[bank-webhook] ${event.banco} ${nossoNumero} marcado como PAGO (R$ ${valorPago})`)
+
+  // LAP: outcome crítico do LHS — % baixa automática alimenta Outcomes (25%)
+  if (escolaId) {
+    try {
+      const { trackEvent } = await import('../_shared/track.ts')
+      const valorCents = Math.round((typeof valorPago === 'number' ? valorPago : Number(valorPago) || 0) * 100)
+      trackEvent(sb, {
+        escola_id: escolaId,
+        event_name: 'financeiro.baixa.automatica',
+        module: 'financeiro',
+        persona: 'sistema',
+        source: 'webhook',
+        payload: {
+          banco: event.banco,
+          nosso_numero: nossoNumero,
+          valor_cents: valorCents,
+          data_pagamento: dataPagamento,
+        },
+        // Dedup de replay do banco — mesmo webhook repetido = mesmo idempotency_key
+        idempotency_key: `bank-webhook:${event.banco}:${nossoNumero}`,
+      })
+    } catch (_) { /* silent */ }
+  }
 }
 
 async function processarBoletoStatus(sb: any, event: WebhookEvent): Promise<void> {

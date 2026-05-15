@@ -781,6 +781,23 @@ export async function handle(ctx: GerenteCtx): Promise<Response | null> {
       acao: 'criar', ip, user_agent: req.headers.get('user-agent'),
       depois: { nome, email, serie, responsavel_nome },
     });
+
+    // LAP: matrícula manual via Lumied (Aha do módulo academico)
+    if (data?.id) {
+      try {
+        const { trackEvent } = await import("../../_shared/track.ts");
+        trackEvent(admin, {
+          escola_id: gerente.escola_id,
+          user_id: gerente.id,
+          event_name: "academico.aluno.matriculado",
+          module: "academico",
+          persona: "secretaria",
+          payload: { aluno_id: data.id, via: "lumied", serie },
+          idempotency_key: `aluno-matric:${data.id}`,
+        });
+      } catch (_) { /* silent */ }
+    }
+
     return ok({ success: true, id: data?.id });
   }
 
@@ -1321,8 +1338,25 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url, foto_path: foto_path_value, escola_id: sessionEscolaId };
     if (usuario_id) insert.usuario_id = usuario_id;
     else if (gerente?.id) insert.usuario_id = gerente.id;
-    const { error } = await admin.from("manutencoes").insert(insert);
+    const { data: chamadoG, error } = await admin.from("manutencoes").insert(insert).select("id").single();
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
+
+    // LAP: manut chamado aberto via gerente
+    if (chamadoG?.id) {
+      try {
+        const { trackEvent } = await import("../../_shared/track.ts");
+        trackEvent(admin, {
+          escola_id: sessionEscolaId,
+          user_id: (insert.usuario_id as string) || null,
+          event_name: "manutencao.chamado.aberto",
+          module: "manutencao",
+          persona: "diretor",
+          payload: { urgencia, has_foto: !!foto_url, chamado_id: chamadoG.id, origem: "gerente" },
+          idempotency_key: `manut-aberto:${chamadoG.id}`,
+        });
+      } catch (_) { /* silent */ }
+    }
+
     return ok({ success: true });
   }
   if (action === "manutencao_update_status") {
@@ -1336,6 +1370,31 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     if (status === "concluida") update.data_conclusao = new Date().toISOString().split("T")[0];
     const { error } = await admin.from("manutencoes").update(update).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
+
+    // LAP: outcome SLA — quando vira concluida, calcula tempo e emite no_sla/fora_sla
+    if (status === "concluida") {
+      try {
+        const { data: chamado } = await admin.from("manutencoes")
+          .select("criado_em, urgencia").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
+        if (chamado?.criado_em) {
+          const tempoSeg = Math.floor((Date.now() - new Date(chamado.criado_em as string).getTime()) / 1000);
+          // Heurística SLA: urgencia 'alta'=24h, 'media'=72h, 'baixa'=7d (default 7d quando não vier)
+          const slaSegPorUrgencia: Record<string, number> = { alta: 86400, media: 259200, baixa: 604800 };
+          const slaSeg = slaSegPorUrgencia[(chamado.urgencia as string) || "baixa"] ?? 604800;
+          const dentroSla = tempoSeg <= slaSeg;
+          const { trackEvent } = await import("../../_shared/track.ts");
+          trackEvent(admin, {
+            escola_id: sessionEscolaId,
+            event_name: dentroSla ? "manutencao.chamado.fechado_no_sla" : "manutencao.chamado.fechado_fora_sla",
+            module: "manutencao",
+            persona: "diretor",
+            payload: { chamado_id: id, tempo_seg: tempoSeg, sla_seg: slaSeg, urgencia: chamado.urgencia ?? null },
+            idempotency_key: `manut-fechado:${id}`,
+          });
+        }
+      } catch (_) { /* silent */ }
+    }
+
     return ok({ success: true });
   }
   if (action === "manutencao_delete") {

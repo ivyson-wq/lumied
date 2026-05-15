@@ -4,6 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="/sentry-init.js"></script>
 <script src="/analytics.js" defer></script>
+<script src="/product-events.js" defer></script>
 <script src="/referral-widget.js" defer></script>
 <script src="/config.js"></script>
 <script src="/dist/admin-central/index.js" defer></script>
@@ -261,6 +262,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div class="sb-label">GTM</div>
       <a class="nav-item" onclick="showPanel('crm',this)"><span class="ic">🎯</span> CRM Lumied</a>
       <a class="nav-item" onclick="showPanel('funil',this)"><span class="ic">📉</span> Funil</a>
+      <a class="nav-item" onclick="showPanel('activation',this)"><span class="ic">🚀</span> Ativação <span class="nav-badge" id="activationBadge" style="display:none;">0</span></a>
       <a class="nav-item" onclick="showPanel('saude',this)"><span class="ic">❤️‍🩹</span> Saúde CS</a>
       <a class="nav-item" onclick="showPanel('playbooks',this)"><span class="ic">📚</span> Playbooks</a>
     </div>
@@ -909,6 +911,108 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- PAINEL: ATIVAÇÃO (Lumied Activation Program — mig 342+343) -->
+      <div id="panelActivation" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+          <div>
+            <div class="sec-title" style="margin-bottom:4px;">🚀 Lumied Activation Program <span id="lapGerado" style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
+            <div style="font-size:12px;color:var(--muted);">Onboarding mundialmente competitivo: Setup → Aha → Habit. NSM = AMPS @ D60.</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="action-btn" onclick="loadActivation()">🔄 Atualizar</button>
+            <button class="btn-primary" onclick="recomputeActivation()" title="Força recálculo do health score em todas escolas (normalmente roda às 04:00 BRT)">⚡ Recalcular agora</button>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card" style="border-left:4px solid #6C63FF;">
+            <div class="kpi-icon">⭐</div>
+            <div class="kpi-value" id="lapAmpsD60">-</div>
+            <div class="kpi-label">AMPS @ D60 médio <span style="color:var(--muted);font-size:10px;">(North Star)</span></div>
+          </div>
+          <div class="kpi-card" style="border-left:4px solid #3B82F6;">
+            <div class="kpi-icon">📈</div>
+            <div class="kpi-value" id="lapAmpsAtual">-</div>
+            <div class="kpi-label">AMPS atual médio (14d)</div>
+          </div>
+          <div class="kpi-card" style="border-left:4px solid #16a34a;">
+            <div class="kpi-icon">🟢</div>
+            <div class="kpi-value" id="lapPctGreen">-</div>
+            <div class="kpi-label">% escolas saudáveis</div>
+          </div>
+          <div class="kpi-card" style="border-left:4px solid #c81e1e;">
+            <div class="kpi-icon">🔴</div>
+            <div class="kpi-value" id="lapRed">-</div>
+            <div class="kpi-label">Vermelhas (urgente)</div>
+          </div>
+          <div class="kpi-card" style="border-left:4px solid #d19000;">
+            <div class="kpi-icon">🟡</div>
+            <div class="kpi-value" id="lapYellow">-</div>
+            <div class="kpi-label">Amarelas (atenção)</div>
+          </div>
+          <div class="kpi-card" style="border-left:4px solid #64748b;">
+            <div class="kpi-icon">🏫</div>
+            <div class="kpi-value" id="lapTotal">-</div>
+            <div class="kpi-label">Escolas ativas</div>
+          </div>
+        </div>
+
+        <!-- Filtros -->
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:10px 14px;">
+          <span style="font-size:12px;font-weight:700;color:var(--muted);">Filtrar:</span>
+          <select id="lapFiltroCor" onchange="renderActivationTable()" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);">
+            <option value="">Todas as cores</option>
+            <option value="red">🔴 Vermelhas</option>
+            <option value="yellow">🟡 Amarelas</option>
+            <option value="green">🟢 Verdes</option>
+          </select>
+          <input id="lapBusca" type="text" placeholder="Buscar por nome/slug..." oninput="renderActivationTable()" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);flex:1;min-width:160px;">
+          <select id="lapOrdem" onchange="renderActivationTable()" style="font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);">
+            <option value="risco">Risco (vermelhas primeiro)</option>
+            <option value="delta">Δ piores 30d</option>
+            <option value="amps_d60">AMPS @ D60 ↓</option>
+            <option value="amps_atual">AMPS atual ↓</option>
+            <option value="dias">Mais antigas (D0)</option>
+            <option value="dias_novas">Mais novas (D0)</option>
+            <option value="score_asc">Score ↑</option>
+          </select>
+        </div>
+
+        <!-- Tabela -->
+        <div style="margin-top:14px;background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+          <div style="overflow-x:auto;">
+            <table id="lapTable" style="width:100%;border-collapse:collapse;font-size:12.5px;">
+              <thead style="background:#F8FAFC;border-bottom:1px solid var(--border);">
+                <tr>
+                  <th style="text-align:left;padding:10px 12px;font-weight:700;color:var(--muted);">Escola</th>
+                  <th style="text-align:left;padding:10px 12px;font-weight:700;color:var(--muted);">Plano</th>
+                  <th style="text-align:right;padding:10px 12px;font-weight:700;color:var(--muted);">Dias</th>
+                  <th style="text-align:center;padding:10px 12px;font-weight:700;color:var(--muted);">Score</th>
+                  <th style="text-align:center;padding:10px 12px;font-weight:700;color:var(--muted);">Δ30d</th>
+                  <th style="text-align:center;padding:10px 12px;font-weight:700;color:var(--muted);">AMPS</th>
+                  <th style="text-align:left;padding:10px 12px;font-weight:700;color:var(--muted);">Módulos ativos</th>
+                  <th style="text-align:left;padding:10px 12px;font-weight:700;color:var(--muted);">Stakeholders 7d</th>
+                  <th style="text-align:center;padding:10px 12px;font-weight:700;color:var(--muted);"></th>
+                </tr>
+              </thead>
+              <tbody id="lapTbody">
+                <tr><td colspan="9" style="padding:30px;text-align:center;color:var(--muted);">Carregando…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Side-drawer detalhe escola -->
+        <div id="lapDrawer" style="display:none;position:fixed;top:0;right:0;width:min(560px,100vw);height:100vh;background:#fff;box-shadow:-8px 0 30px rgba(0,0,0,0.18);z-index:9999;overflow-y:auto;padding:24px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div style="font-weight:800;font-size:16px;" id="lapDrawerTitle">Escola</div>
+            <button onclick="document.getElementById('lapDrawer').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
+          </div>
+          <div id="lapDrawerBody" style="font-size:13px;">Carregando…</div>
+        </div>
+      </div>
+
       <!-- PAINEL: SAÚDE CS -->
       <div id="panelSaude" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
@@ -1502,7 +1606,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', papeis:'Papéis & Permissões', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', migracao:'Migração de ERPs', billing:'Cobrança SaaS', finlumied:'Financeiro Interno (Lumied)', bancos:'Configuração Bancária', crm:'CRM Lumied', funil:'Funil Comercial', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', papeis:'Papéis & Permissões', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', migracao:'Migração de ERPs', billing:'Cobrança SaaS', finlumied:'Financeiro Interno (Lumied)', bancos:'Configuração Bancária', crm:'CRM Lumied', funil:'Funil Comercial', activation:'Ativação — LAP', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -1523,6 +1627,7 @@ function showPanel(id, el) {
   if (id === 'migracao') loadMigracao();
   if (id === 'billing') loadBillingCentral();
   if (id === 'finlumied') loadFinlumied();
+  if (id === 'activation') loadActivation();
   if (id === 'saude') loadSaudeCS();
   if (id === 'playbooks') loadPlaybooks();
   if (id === 'crm') loadCRM();
@@ -2534,6 +2639,204 @@ async function loadFunil() {
   document.getElementById('funilToques').innerHTML = tkeys.length
     ? tkeys.map(t => '<div style="background:#f0e6ff;color:#6B3FA0;padding:6px 14px;border-radius:18px;font-weight:700;">' + t + ': ' + toques[t] + '</div>').join('')
     : '<em style="color:var(--muted);">Nenhum toque registrado no período.</em>';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ATIVAÇÃO — Lumied Activation Program (mig 342+343)
+// ═══════════════════════════════════════════════════════════
+let _lapData = null;
+const LAP_MOD_COLORS = {
+  financeiro:'#10b981', manutencao:'#f59e0b', almoxarifado:'#8b5cf6',
+  ponto:'#06b6d4', crm:'#ec4899', academico:'#3b82f6',
+  comunicacao:'#14b8a6', dashboard:'#6366f1', cobranca:'#f97316',
+  agenda:'#84cc16', rh:'#a855f7', compliance:'#dc2626',
+};
+
+async function loadActivation() {
+  const tbody = document.getElementById('lapTbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="padding:30px;text-align:center;color:var(--muted);">Carregando…</td></tr>';
+  try {
+    const d = await api({ action: 'lap_activation_overview' });
+    if (d.error) {
+      tbody.innerHTML = '<tr><td colspan="9" style="padding:30px;text-align:center;color:#b00020;">' + esc(d.error.message || d.error) + '</td></tr>';
+      return;
+    }
+    _lapData = d;
+    // KPIs
+    document.getElementById('lapAmpsD60').textContent = d.kpis.amps_d60_medio != null ? d.kpis.amps_d60_medio : '—';
+    document.getElementById('lapAmpsAtual').textContent = d.kpis.amps_medio ?? '—';
+    document.getElementById('lapPctGreen').textContent = (d.kpis.pct_green ?? 0) + '%';
+    document.getElementById('lapRed').textContent = d.kpis.por_cor?.red ?? 0;
+    document.getElementById('lapYellow').textContent = d.kpis.por_cor?.yellow ?? 0;
+    document.getElementById('lapTotal').textContent = d.kpis.escolas_total ?? 0;
+    document.getElementById('lapGerado').textContent = 'gerado em ' + new Date(d.gerado_em).toLocaleString('pt-BR');
+
+    // Badge de vermelhas na sidebar
+    const badge = document.getElementById('activationBadge');
+    if (badge) {
+      const red = d.kpis.por_cor?.red ?? 0;
+      if (red > 0) { badge.textContent = red; badge.style.display = ''; }
+      else { badge.style.display = 'none'; }
+    }
+
+    renderActivationTable();
+  } catch (e) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="padding:30px;text-align:center;color:#b00020;">' + esc(String(e?.message || e)) + '</td></tr>';
+  }
+}
+
+function renderActivationTable() {
+  if (!_lapData) return;
+  const tbody = document.getElementById('lapTbody');
+  const cor = document.getElementById('lapFiltroCor').value;
+  const busca = (document.getElementById('lapBusca').value || '').toLowerCase().trim();
+  const ord = document.getElementById('lapOrdem').value;
+
+  let rows = (_lapData.escolas || []).slice();
+  if (cor) rows = rows.filter(r => r.color === cor);
+  if (busca) rows = rows.filter(r =>
+    (r.escola_nome || '').toLowerCase().includes(busca) ||
+    (r.escola_slug || '').toLowerCase().includes(busca)
+  );
+
+  const cmpRisco = (a, b) => {
+    const ord = { red:0, yellow:1, green:2 };
+    return (ord[a.color] ?? 3) - (ord[b.color] ?? 3) || (a.score - b.score);
+  };
+  if (ord === 'risco') rows.sort(cmpRisco);
+  else if (ord === 'delta') rows.sort((a,b) => (a.delta_30d ?? 0) - (b.delta_30d ?? 0));
+  else if (ord === 'amps_d60') rows.sort((a,b) => (b.amps_d60 ?? -1) - (a.amps_d60 ?? -1));
+  else if (ord === 'amps_atual') rows.sort((a,b) => (b.amps_atual ?? 0) - (a.amps_atual ?? 0));
+  else if (ord === 'dias') rows.sort((a,b) => (b.dias_desde_d0 ?? 0) - (a.dias_desde_d0 ?? 0));
+  else if (ord === 'dias_novas') rows.sort((a,b) => (a.dias_desde_d0 ?? 9999) - (b.dias_desde_d0 ?? 9999));
+  else if (ord === 'score_asc') rows.sort((a,b) => a.score - b.score);
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:30px;text-align:center;color:var(--muted);">Nenhuma escola encontrada.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const colorMap = { green:'#16a34a', yellow:'#d19000', red:'#c81e1e' };
+    const cb = colorMap[r.color] || '#64748b';
+    const scoreBg = r.color === 'red' ? '#fee2e2' : r.color === 'yellow' ? '#fef3c7' : '#d1fae5';
+    const deltaTxt = r.delta_30d > 0 ? '+' + r.delta_30d : (r.delta_30d ?? 0);
+    const deltaCol = r.delta_30d > 0 ? '#16a34a' : r.delta_30d < 0 ? '#c81e1e' : 'var(--muted)';
+    const mods = (r.active_modules || []).map(m => {
+      const c = LAP_MOD_COLORS[m] || '#64748b';
+      return `<span style="display:inline-block;padding:2px 7px;background:${c}22;color:${c};border-radius:10px;font-size:10.5px;font-weight:600;margin-right:3px;">${esc(m)}</span>`;
+    }).join('') || '<span style="color:var(--muted);font-size:11px;">—</span>';
+    const stake = (r.stakeholders_logaram || []).join(', ') || '<span style="color:var(--muted);">nenhum</span>';
+    const ampsTxt = r.amps_d60 != null
+      ? `<b>${r.amps_atual}</b> <span style="color:var(--muted);">/${r.amps_d60}@D60</span>`
+      : `<b>${r.amps_atual}</b>`;
+    return `<tr style="border-top:1px solid var(--border);">
+      <td style="padding:9px 12px;">
+        <div style="font-weight:700;">${esc(r.escola_nome || '—')}</div>
+        <div style="font-size:11px;color:var(--muted);">${esc(r.escola_slug || '')}</div>
+      </td>
+      <td style="padding:9px 12px;font-size:11.5px;">${esc(r.plano || '—')}</td>
+      <td style="padding:9px 12px;text-align:right;font-variant-numeric:tabular-nums;">${r.dias_desde_d0 ?? '—'}d</td>
+      <td style="padding:9px 12px;text-align:center;">
+        <span style="display:inline-block;min-width:44px;padding:3px 10px;background:${scoreBg};color:${cb};border-radius:8px;font-weight:800;">${r.score}</span>
+      </td>
+      <td style="padding:9px 12px;text-align:center;color:${deltaCol};font-weight:700;">${deltaTxt}</td>
+      <td style="padding:9px 12px;text-align:center;font-variant-numeric:tabular-nums;">${ampsTxt}</td>
+      <td style="padding:9px 12px;">${mods}</td>
+      <td style="padding:9px 12px;font-size:11px;">${esc(stake)}</td>
+      <td style="padding:9px 12px;text-align:center;">
+        <button class="action-btn" onclick="openActivationDrawer('${esc(r.escola_id)}', '${esc(r.escola_nome || '')}')">↗</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function recomputeActivation() {
+  const btn = event?.target;
+  const txt = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Recalculando…'; }
+  try {
+    const d = await api({ action: 'lap_activation_recompute' });
+    if (d.error) {
+      window.__toast?.error?.(d.error.message || 'Falha ao recalcular.');
+    } else {
+      window.__toast?.success?.('Recalculado: ' + (d.escolas_processadas ?? '?') + ' escolas em ' + (d.duracao_ms ?? '?') + 'ms');
+      await loadActivation();
+    }
+  } catch (e) {
+    window.__toast?.error?.(String(e?.message || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = txt || '⚡ Recalcular agora'; }
+  }
+}
+
+async function openActivationDrawer(escolaId, escolaNome) {
+  const drawer = document.getElementById('lapDrawer');
+  const body = document.getElementById('lapDrawerBody');
+  document.getElementById('lapDrawerTitle').textContent = escolaNome || 'Escola';
+  body.innerHTML = '<div style="color:var(--muted);padding:20px;">Carregando…</div>';
+  drawer.style.display = '';
+  try {
+    const d = await api({ action: 'lap_activation_escola_detail', escola_id: escolaId });
+    if (d.error) {
+      body.innerHTML = '<div style="color:#b00020;padding:20px;">' + esc(d.error.message || d.error) + '</div>';
+      return;
+    }
+    const h = d.health || {};
+    const breakdown = h.breakdown || {};
+    const ad = breakdown.adocao || {};
+    const sh = breakdown.stakeholders || {};
+    const oc = breakdown.outcomes || {};
+    const colorMap = { green:'#16a34a', yellow:'#d19000', red:'#c81e1e' };
+    const cb = colorMap[h.color] || '#64748b';
+
+    const eventsHtml = (d.eventos || []).slice(0, 50).map(e => {
+      const dt = new Date(e.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      return `<div style="border-bottom:1px solid var(--border);padding:6px 0;font-size:11.5px;display:flex;justify-content:space-between;gap:8px;">
+        <div><b>${esc(e.event_name)}</b> <span style="color:var(--muted);">· ${esc(e.persona || '?')} · ${esc(e.module || '—')}</span></div>
+        <div style="color:var(--muted);white-space:nowrap;">${dt}</div>
+      </div>`;
+    }).join('') || '<div style="color:var(--muted);padding:14px 0;">Nenhum evento nos últimos 30 dias. Provavelmente a escola ainda não está instrumentada — verifique se <code>/product-events.js</code> foi incluído nas páginas.</div>';
+
+    body.innerHTML = `
+      <div style="background:#F8FAFC;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:11px;color:var(--muted);">Health Score</div>
+          <span style="font-size:11px;color:${cb};font-weight:700;text-transform:uppercase;">${esc(h.color || '?')}</span>
+        </div>
+        <div style="font-size:34px;font-weight:800;color:${cb};line-height:1.1;">${h.score ?? '—'}</div>
+        <div style="font-size:11px;color:var(--muted);">Δ30d: ${h.delta_30d ?? 0} · AMPS atual: ${h.amps_atual ?? 0}${h.amps_d60 != null ? ' · AMPS@D60: '+h.amps_d60 : ''}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;">
+          <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700;">Adoção (40%)</div>
+          <div style="font-size:20px;font-weight:800;margin:4px 0;">${ad.score ?? 0}</div>
+          <div style="font-size:11px;color:var(--muted);">${(ad.active_modules||[]).join(', ') || 'nenhum módulo ativo'}</div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;">
+          <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700;">Stakeholders (20%)</div>
+          <div style="font-size:20px;font-weight:800;margin:4px 0;">${sh.score ?? 0}</div>
+          <div style="font-size:11px;color:var(--muted);">${(sh.logaram||[]).join(', ') || 'ninguém logou 7d'}</div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;">
+          <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700;">Outcomes (25%)</div>
+          <div style="font-size:20px;font-weight:800;margin:4px 0;">${oc.score ?? 0}</div>
+          <div style="font-size:11px;color:var(--muted);">Baixa auto: ${oc.baixa_auto ?? 0}/${oc.baixa_total ?? 0} · SLA: ${oc.chamados_sla ?? 0}/${oc.chamados_total ?? 0}</div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;">
+          <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700;">Sentimento (15%)</div>
+          <div style="font-size:20px;font-weight:800;margin:4px 0;">${breakdown.sentiment?.score ?? 75}</div>
+          <div style="font-size:11px;color:var(--muted);">NPS pendente de integração</div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px;">Timeline (últimos 30d, ${d.eventos?.length ?? 0} eventos)</div>
+      <div>${eventsHtml}</div>
+    `;
+  } catch (e) {
+    body.innerHTML = '<div style="color:#b00020;padding:20px;">' + esc(String(e?.message || e)) + '</div>';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════

@@ -683,6 +683,22 @@ router.on("aluno_login", loadEscola, featAluno, async (ctx) => {
   const tkn = gerarToken();
   const { error: asErr } = await ctx.sb.from("aluno_sessoes").insert({ aluno_id: aluno.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
   if (asErr) throw new AppError("AUTH_SESSION_FAILED", "Não foi possível criar a sessão.");
+
+  // LAP: aluno logado (proxy do habit "portal aluno usado")
+  if (ctx.escola_id) {
+    try {
+      const { trackEvent } = await import("../_shared/track.ts");
+      trackEvent(ctx.sb, {
+        escola_id: ctx.escola_id,
+        user_id: aluno.id,
+        event_name: "auth.user.logged_in",
+        module: "auth",
+        persona: "aluno",
+        payload: { sessao_table: "aluno_sessoes" },
+      });
+    } catch (_) { /* silent */ }
+  }
+
   return successResponse({ token: tkn, nome: aluno.aluno_nome, email: aluno.email, serie: aluno.serie });
 });
 

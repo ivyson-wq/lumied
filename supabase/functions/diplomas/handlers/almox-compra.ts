@@ -513,8 +513,26 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
         aprovado_financeiro: aprov,
         aprovado_financeiro_em: new Date().toISOString(),
         aprovado_financeiro_por: (gerente as any).nome || null,
-      }).in('id', ids).eq('escola_id', (gerente as any).escola_id).select('id')
+      }).in('id', ids).eq('escola_id', (gerente as any).escola_id).select('id, preco_total')
       if (error) return json({ error: error.message }, 400)
+
+      // LAP: aprovação financeira de compra é outcome do almox
+      if (aprov && updated?.length) {
+        try {
+          const { trackEvents } = await import('../../_shared/track.ts')
+          const evs = (updated as any[]).map(c => ({
+            escola_id: (gerente as any).escola_id,
+            user_id: (gerente as any).id || null,
+            event_name: 'almoxarifado.compra.aprovada',
+            module: 'almoxarifado',
+            persona: 'financeiro',
+            payload: { compra_id: c.id, valor_cents: Math.round(Number(c.preco_total || 0) * 100) },
+            idempotency_key: `alm-compra-aprov:${c.id}`,
+          }))
+          trackEvents(sb, evs)
+        } catch (_) { /* silent */ }
+      }
+
       return json({ ok: true, atualizados: updated?.length ?? 0, decisao: aprov ? 'aprovado' : 'rejeitado' })
     }
 

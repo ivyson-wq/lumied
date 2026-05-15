@@ -20,6 +20,26 @@ import { type Any, type BaseCtx, escapeHtml, sanitizeHeaderValue, sha256Hex, san
 
 const log = createLogger("api");
 
+// LAP: mapeia papeis[] do usuário pra persona do LHS.
+// Mesma precedência da edge function track-event e do handler de api/handlers/auth.ts.
+function inferLapPersona(papeis: unknown): string {
+  if (!Array.isArray(papeis)) return "sistema";
+  const set = new Set(papeis.map(String));
+  if (set.has("diretor")) return "diretor";
+  if (set.has("financeiro")) return "financeiro";
+  if (set.has("comercial")) return "comercial";
+  if (set.has("nutricionista")) return "nutricionista";
+  if (set.has("almoxarifado")) return "almoxarife";
+  if (set.has("manutencao")) return "manutencao";
+  if (set.has("impressao")) return "impressao";
+  if (set.has("coord_pedagogico")) return "coord_pedagogico";
+  if (set.has("professora_assistente")) return "professora_assistente";
+  if (set.has("professora")) return "professora";
+  if (set.has("secretaria")) return "secretaria";
+  if (set.has("gerente")) return "diretor";
+  return "sistema";
+}
+
 export async function handle(ctx: BaseCtx): Promise<Response | null> {
   const { req, admin, body, action, ip, ok, err, cors: CORS, PUBLIC_CACHE } = ctx;
   // ── Validar superusuário (admin.html) ──
@@ -111,12 +131,44 @@ export async function handle(ctx: BaseCtx): Promise<Response | null> {
     if (!familia || !familia.senha_hash) return err("E-mail ou senha incorretos.");
     if (!(await verificarSenhaAuto(senha, familia.senha_hash))) return err("E-mail ou senha incorretos.");
 
+    // 1º login? Checa se já existem sessoes prévias dessa família.
+    const { count: prevSessoes } = await admin
+      .from("familia_sessoes")
+      .select("*", { count: "exact", head: true })
+      .eq("familia_id", familia.id);
+    const isFirstLogin = (prevSessoes ?? 0) === 0;
+
     const token = gerarToken();
     await admin.from("familia_sessoes").insert({
       familia_id: familia.id,
       token,
       expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     });
+
+    // LAP: cobertura de stakeholders 'pais' + convite aceito (onboarding) no 1º login
+    try {
+      const { trackEvents } = await import("../../_shared/track.ts");
+      const evs: any[] = [{
+        escola_id: familia.escola_id,
+        user_id: familia.id,
+        event_name: "auth.user.logged_in",
+        module: "auth",
+        persona: "pais",
+        payload: { sessao_table: "familia_sessoes" },
+      }];
+      if (isFirstLogin) {
+        evs.push({
+          escola_id: familia.escola_id,
+          user_id: familia.id,
+          event_name: "pais.convite.aceito",
+          module: "onboarding",
+          persona: "pais",
+          payload: { canal: "email_senha" },
+          idempotency_key: `pai-convite:${familia.id}`,
+        });
+      }
+      trackEvents(admin, evs);
+    } catch (_) { /* silent */ }
 
     return ok({ token, nome: familia.nome_responsavel || "Família", email: familia.email });
   }
@@ -721,6 +773,21 @@ export async function handle(ctx: BaseCtx): Promise<Response | null> {
       // Fetch papeis from usuarios table for role-based gating
       const { data: uPapeis } = await admin.from("usuarios").select("papeis").eq("email", email).eq("escola_id", g.escola_id).maybeSingle();
       const papeis = uPapeis?.papeis || ["gerente"];
+
+      // LAP: stakeholders + adoção dashboard
+      try {
+        const { trackEvent } = await import("../../_shared/track.ts");
+        const persona = inferLapPersona(papeis);
+        trackEvent(admin, {
+          escola_id: g.escola_id,
+          user_id: g.id,
+          event_name: "auth.user.logged_in",
+          module: "auth",
+          persona,
+          payload: { sessao_table: "gerente_sessoes" },
+        });
+      } catch (_) { /* silent */ }
+
       return ok({ token: sessao.token, nome: g.nome, email: g.email, papeis });
     }
     // Fallback: busca na tabela unificada usuarios (apenas comercial pode acessar CRM)
@@ -744,6 +811,20 @@ export async function handle(ctx: BaseCtx): Promise<Response | null> {
       console.error("[auth] usuario login AUTH_SESSION_FAILED", { email, err: uSErr });
       return err("Não foi possível criar a sessão. Tente novamente.", 500, "AUTH_SESSION_FAILED");
     }
+
+    // LAP: cobertura de personas operacionais (comercial etc.)
+    try {
+      const { trackEvent } = await import("../../_shared/track.ts");
+      trackEvent(admin, {
+        escola_id: u.escola_id,
+        user_id: u.id,
+        event_name: "auth.user.logged_in",
+        module: "auth",
+        persona: inferLapPersona(uRoles),
+        payload: { sessao_table: "sessoes" },
+      });
+    } catch (_) { /* silent */ }
+
     return ok({ token: uSessao.token, nome: u.nome, email: u.email });
   }
 
@@ -780,13 +861,26 @@ export async function handle(ctx: BaseCtx): Promise<Response | null> {
     try {
       const result = await verifyAuthentication(credential.response.clientDataJSON, credential.response.authenticatorData, credential.response.signature, ch.challenge, rp_id, cred.public_key, cred.sign_count);
       await admin.from("webauthn_credentials").update({ sign_count: result.newSignCount }).eq("id", cred.id);
-      const { data: g } = await admin.from("gerentes").select("nome, email").eq("id", cred.usuario_id).maybeSingle();
+      const { data: g } = await admin.from("gerentes").select("nome, email, escola_id, papeis").eq("id", cred.usuario_id).maybeSingle();
       if (!g) return err("Gerente não encontrado.", 404);
       const { data: sess, error: sErr } = await admin.from("gerente_sessoes").insert({ gerente_id: cred.usuario_id }).select("token").single();
       if (sErr || !sess?.token) {
         console.error("[auth] webauthn gerente AUTH_SESSION_FAILED", { user: cred.usuario_id, err: sErr });
         return err("Não foi possível criar a sessão.", 500, "AUTH_SESSION_FAILED");
       }
+
+      // LAP: webauthn login emite stakeholder logado
+      try {
+        const { trackEvent } = await import("../../_shared/track.ts");
+        trackEvent(admin, {
+          escola_id: (g as any).escola_id,
+          user_id: cred.usuario_id,
+          event_name: "auth.user.logged_in",
+          module: "auth",
+          persona: inferLapPersona((g as any).papeis),
+          payload: { sessao_table: "gerente_sessoes", via: "webauthn" },
+        });
+      } catch (_) { /* silent */ }
       return ok({ token: sess.token, nome: g.nome, email: g.email });
     } catch (e) { return err("Verificação falhou: " + (e as Error).message, 400); }
   }
@@ -1052,6 +1146,20 @@ export async function handle(ctx: BaseCtx): Promise<Response | null> {
       }).select("id").single();
       if (errCria) return err(sanitizePgError(errCria));
       alvoAlunoId = (criado as any).id;
+
+      // LAP: aluno matriculado via fluxo de inscrição (Aha academico)
+      try {
+        const { trackEvent } = await import("../../_shared/track.ts");
+        trackEvent(admin, {
+          escola_id: gerente.escola_id,
+          user_id: gerente.id,
+          event_name: "academico.aluno.matriculado",
+          module: "academico",
+          persona: "secretaria",
+          payload: { aluno_id: alvoAlunoId, via: "lumied_atividades", serie: novo_aluno.serie },
+          idempotency_key: `aluno-matric:${alvoAlunoId}`,
+        });
+      } catch (_) { /* silent */ }
     }
 
     const { error: errUpd } = await admin.from("alunos").update({
@@ -1090,15 +1198,31 @@ export async function handle(ctx: BaseCtx): Promise<Response | null> {
       if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     } else {
       // Aluno não cadastrado — cria na tabela alunos escopado
-      const { error } = await admin.from("alunos").insert({
+      const { data: novoAluno, error } = await admin.from("alunos").insert({
         nome: nome_crianca, email: email || null, serie: serie || null,
         responsavel_nome: nome_resp,
         atividades_ids: atividades_ids as string[],
         turmas_selecionadas: turmas_selecionadas ?? [],
         ativo: true,
         escola_id: fam.escola_id,
-      });
+      }).select("id").single();
       if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
+
+      // LAP: aluno matriculado via portal família (matrícula online)
+      if (novoAluno?.id) {
+        try {
+          const { trackEvent } = await import("../../_shared/track.ts");
+          trackEvent(admin, {
+            escola_id: fam.escola_id,
+            user_id: fam.id,
+            event_name: "academico.aluno.matriculado",
+            module: "academico",
+            persona: "pais",
+            payload: { aluno_id: novoAluno.id, via: "matricula_online", serie },
+            idempotency_key: `aluno-matric:${novoAluno.id}`,
+          });
+        } catch (_) { /* silent */ }
+      }
     }
     return ok({ success: true });
   }
@@ -1134,8 +1258,25 @@ export async function handle(ctx: BaseCtx): Promise<Response | null> {
       const { data: u } = await admin.from("usuarios").select("id").eq("escola_id", escolaIdMan).eq("email", _email as string).maybeSingle();
       if (u) insert.usuario_id = u.id;
     }
-    const { error } = await admin.from("manutencoes").insert(insert);
+    const { data: chamadoNovo, error } = await admin.from("manutencoes").insert(insert).select("id").single();
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
+
+    // LAP: manutencao.chamado.aberto (outcomes do LHS quando fechado_no_sla depois)
+    if (chamadoNovo?.id) {
+      try {
+        const { trackEvent } = await import("../../_shared/track.ts");
+        trackEvent(admin, {
+          escola_id: escolaIdMan,
+          user_id: (insert.usuario_id as string) || null,
+          event_name: "manutencao.chamado.aberto",
+          module: "manutencao",
+          persona: "professora",
+          payload: { urgencia, has_foto: !!foto_url, chamado_id: chamadoNovo.id, origem: "publico" },
+          idempotency_key: `manut-aberto:${chamadoNovo.id}`,
+        });
+      } catch (_) { /* silent */ }
+    }
+
     return ok({ success: true });
   }
 

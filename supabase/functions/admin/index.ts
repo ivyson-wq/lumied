@@ -514,12 +514,151 @@ router.on("cs_saude_list", authAdmin, async (ctx) => {
   return successResponse({ escolas: resultado, gerado_em: hoje.toISOString() });
 });
 
+// ═══════════════════════════════════════════════════════
+//  LAP — Lumied Activation Program (mig 342+343)
+//  Dashboard de onboarding/ativação. NSM = AMPS @ D60.
+//  Fonte: escola_health_score_cache + product_events
+// ═══════════════════════════════════════════════════════
+router.on("lap_activation_overview", authAdmin, async (ctx) => {
+  const { tier, color, owner } = ctx.body as any;
+
+  // Cache primeiro; fallback pra cálculo on-the-fly se vazio
+  // deno-lint-ignore no-explicit-any
+  let q: any = ctx.sb.from("escola_health_score_cache").select(`
+    escola_id, score, color, amps_atual, amps_d60, delta_30d, breakdown, computed_at,
+    escolas!inner(id, nome, slug, plano, plano_id, criado_em, ativo)
+  `);
+  if (color) q = q.eq("color", color);
+  const { data: cached, error } = await q.order("score", { ascending: true });
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+
+  // deno-lint-ignore no-explicit-any
+  const rows = (cached || []).map((r: any) => {
+    const e = r.escolas;
+    const diasDesdeD0 = e?.criado_em
+      ? Math.floor((Date.now() - new Date(e.criado_em).getTime()) / 86400000)
+      : null;
+    return {
+      escola_id: r.escola_id,
+      escola_nome: e?.nome,
+      escola_slug: e?.slug,
+      plano: e?.plano || e?.plano_id,
+      ativo: e?.ativo,
+      dias_desde_d0: diasDesdeD0,
+      score: r.score,
+      color: r.color,
+      amps_atual: r.amps_atual,
+      amps_d60: r.amps_d60,
+      delta_30d: r.delta_30d,
+      active_modules: r.breakdown?.adocao?.active_modules || [],
+      stakeholders_logaram: r.breakdown?.stakeholders?.logaram || [],
+      stakeholders_count: r.breakdown?.stakeholders?.count ?? 0,
+      computed_at: r.computed_at,
+    };
+  });
+
+  // Filtros app-side simples
+  let filtered = rows;
+  if (tier) filtered = filtered.filter((r) => (r.plano || "").toLowerCase().includes(String(tier).toLowerCase()));
+
+  // KPIs agregados
+  const escolas_total = filtered.length;
+  const com_score = filtered.filter((r) => r.score != null);
+  const amps_medio = com_score.length > 0
+    ? Math.round((com_score.reduce((a, r) => a + (r.amps_atual || 0), 0) / com_score.length) * 10) / 10
+    : 0;
+  const amps_d60_medio = (() => {
+    const xs = filtered.filter((r) => r.amps_d60 != null).map((r) => r.amps_d60 as number);
+    return xs.length > 0 ? Math.round((xs.reduce((a, x) => a + x, 0) / xs.length) * 10) / 10 : null;
+  })();
+
+  const por_cor = {
+    green:  filtered.filter((r) => r.color === "green").length,
+    yellow: filtered.filter((r) => r.color === "yellow").length,
+    red:    filtered.filter((r) => r.color === "red").length,
+  };
+
+  return successResponse({
+    kpis: {
+      escolas_total,
+      amps_medio,
+      amps_d60_medio,
+      pct_green: escolas_total > 0 ? Math.round((por_cor.green / escolas_total) * 100) : 0,
+      por_cor,
+    },
+    escolas: filtered,
+    gerado_em: new Date().toISOString(),
+  });
+});
+
+router.on("lap_activation_recompute", authAdmin, async (ctx) => {
+  // Chama refresh_all_lumied_health_scores() — útil pra forçar atualização
+  // sem esperar o pg_cron. Idealmente só fundador/CS lead.
+  const { data, error } = await ctx.sb.rpc("refresh_all_lumied_health_scores");
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("lap_activation_escola_detail", authAdmin, validateInput(escolaIdSchema), async (ctx) => {
+  const escola_id = ctx.body.escola_id as string;
+
+  // Cache da escola
+  const { data: cache } = await ctx.sb.from("escola_health_score_cache")
+    .select("*").eq("escola_id", escola_id).maybeSingle();
+
+  // Escola
+  const { data: escola } = await ctx.sb.from("escolas")
+    .select("id, nome, slug, plano, plano_id, criado_em, ativo")
+    .eq("id", escola_id).maybeSingle();
+
+  // Timeline últimos 30 dias (top 200 eventos)
+  const ms30 = new Date(Date.now() - 30 * 86400000).toISOString();
+  const { data: events } = await ctx.sb.from("product_events")
+    .select("event_name, module, persona, payload, created_at")
+    .eq("escola_id", escola_id)
+    .gte("created_at", ms30)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  // Agregação por dia × módulo pra mostrar heatmap
+  const heatmap = new Map<string, Map<string, number>>();
+  for (const e of (events || []) as any[]) {
+    const dia = (e.created_at as string).slice(0, 10);
+    const mod = e.module || "outro";
+    if (!heatmap.has(dia)) heatmap.set(dia, new Map());
+    const dayMap = heatmap.get(dia)!;
+    dayMap.set(mod, (dayMap.get(mod) || 0) + 1);
+  }
+  const heatmapArr = Array.from(heatmap.entries())
+    .map(([dia, mods]) => ({ dia, modulos: Object.fromEntries(mods) }))
+    .sort((a, b) => b.dia.localeCompare(a.dia));
+
+  return successResponse({
+    escola,
+    health: cache,
+    eventos: events || [],
+    heatmap: heatmapArr,
+  });
+});
+
 router.on("escolas_create", authAdmin, async (ctx) => {
   const { nome, cnpj, slug, plano_id, contato_nome, contato_email, contato_telefone, tema } = ctx.body as any;
   if (!nome) throw new AppError("VALIDATION_FAILED", "Nome obrigatório.");
   const { data, error } = await ctx.sb.from("escolas").insert({ nome, cnpj, slug, plano_id, contato_nome, contato_email, contato_telefone, tema, plano_inicio: plano_id ? new Date().toISOString().split("T")[0] : null }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   log.info("Escola criada", { metadata: { escola: nome } });
+  // LAP: marca D0 da escola
+  try {
+    const { trackEvent } = await import("../_shared/track.ts");
+    await trackEvent(ctx.sb, {
+      escola_id: data.id,
+      event_name: "onboarding.tenant.criado",
+      module: "onboarding",
+      persona: "staff_lumied",
+      payload: { plano_id, via: "manual_admin_central" },
+      idempotency_key: `tenant_criado:${data.id}`,
+    });
+  } catch (_) { /* não bloqueia */ }
   return successResponse(data);
 });
 
@@ -1258,6 +1397,29 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
     acao: 'criar',
     depois: { nome, subdominio: slug, plano: planoSlug, modulos: modulosAtivados.length },
   });
+
+  // LAP: D0 da escola (Setup) — base do AMPS @ D60
+  try {
+    const { trackEvents } = await import("../_shared/track.ts");
+    await trackEvents(ctx.sb, [
+      {
+        escola_id: escola.id,
+        event_name: "onboarding.tenant.provisionado",
+        module: "onboarding",
+        persona: "staff_lumied",
+        payload: { plano: planoSlug, modulos_count: modulosAtivados.length, series_count: seriesEscolhidas.length, vercel_ok: vercelOk },
+        idempotency_key: `tenant_provisionado:${escola.id}`,
+      },
+      {
+        escola_id: escola.id,
+        event_name: "onboarding.gerente.criado",
+        module: "onboarding",
+        persona: "staff_lumied",
+        payload: { email: emailNorm },
+        idempotency_key: `gerente_criado:${escola.id}`,
+      },
+    ]);
+  } catch (_) { /* não bloqueia */ }
 
   return successResponse({
     success: true,

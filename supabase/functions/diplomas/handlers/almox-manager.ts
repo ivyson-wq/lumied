@@ -1020,6 +1020,21 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
         await sb.from('alm_inventarios').delete().eq('id', inv.id)
         return json({ error: errIts.message }, 400)
       }
+
+      // LAP: 1º inventário criado = sinal de uso real do módulo almox (AMPS)
+      try {
+        const { trackEvent } = await import('../../_shared/track.ts')
+        trackEvent(sb, {
+          escola_id: escolaId,
+          user_id: (gerente as any).id || null,
+          event_name: 'almoxarifado.inventario.criado',
+          module: 'almoxarifado',
+          persona: 'almoxarife',
+          payload: { inventario_id: inv.id, total_itens: insumos.length, filtro_categoria, filtro_localizacao },
+          idempotency_key: `alm-inv-criado:${inv.id}`,
+        })
+      } catch (_) { /* silent */ }
+
       return json({ ok: true, id: inv.id, total: insumos.length })
     }
 
@@ -1151,6 +1166,27 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
         finalizado_por: (gerente as any).id || null,
         total_divergencias: divergencias,
       }).eq('id', id).eq('escola_id', escolaId)
+
+      // LAP: aha moment do almoxarifado — 1º inventário fechado
+      try {
+        const { trackEvent } = await import('../../_shared/track.ts')
+        trackEvent(sb, {
+          escola_id: escolaId,
+          user_id: (gerente as any).id || null,
+          event_name: 'almoxarifado.inventario.fechado',
+          module: 'almoxarifado',
+          persona: 'almoxarife',
+          payload: {
+            inventario_id: id,
+            qtd_itens_contados: lista.filter((x: any) => x.contado).length,
+            qtd_itens_total: lista.length,
+            divergencias,
+            ajustes_aplicados: aplicados,
+            nao_contados: naoContados,
+          },
+          idempotency_key: `alm-inv-fechado:${id}`,
+        })
+      } catch (_) { /* silent */ }
 
       return json({ ok: true, aplicados, divergencias, nao_contados: naoContados })
     }
