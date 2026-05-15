@@ -77,7 +77,7 @@ const authStaff: Middleware = async (ctx, next) => {
 // qualquer job — auditado). Popula ctx.escola_id.
 async function loadJob(ctx: Context, jobId: string): Promise<Record<string, unknown>> {
   if (!jobId) throw new AppError("VALIDATION_FAILED", "job_id obrigatório.");
-  const { data: job } = await ctx.sb.from("migracao_jobs").select("*").eq("id", jobId).maybeSingle();
+  const { data: job } = await ctx.sb.schema("migracao").from("migracao_jobs").select("*").eq("id", jobId).maybeSingle();
   if (!job) throw new AppError("NOT_FOUND", "Job de migração não encontrado.");
   // deno-lint-ignore no-explicit-any
   ctx.escola_id = (job as any).escola_id;
@@ -86,7 +86,7 @@ async function loadJob(ctx: Context, jobId: string): Promise<Record<string, unkn
 
 function staffAudit(ctx: Context, jobId: string, escolaId: string, acao: string, detalhes: Record<string, unknown> = {}) {
   // Trilha específica de migração + audit global.
-  ctx.sb.from("migracao_audit").insert({
+  ctx.sb.schema("migracao").from("migracao_audit").insert({
     job_id: jobId, escola_id: escolaId,
     operador_staff_id: ctx.user?.id, operador_nome: ctx.user?.nome,
     acao, detalhes, ip: ctx.ip,
@@ -122,7 +122,7 @@ const uploadSchema: Schema = {
 
 router.on("migracao_listar_jobs", authStaff, async (ctx: Context) => {
   const { escola_id, status, limit } = ctx.body as { escola_id?: string; status?: string; limit?: number };
-  let q = ctx.sb.from("migracao_jobs").select("*, escolas(nome, slug)")
+  let q = ctx.sb.schema("migracao").from("migracao_jobs").select("*, escolas(nome, slug)")
     .order("criado_em", { ascending: false }).limit(Math.min(limit ?? 50, 200));
   if (escola_id) q = q.eq("escola_id", escola_id);
   if (status) q = q.eq("status", status);
@@ -137,7 +137,7 @@ router.on("migracao_criar_job", authStaff, validateInput(criarJobSchema), async 
   const { data: escola } = await ctx.sb.from("escolas").select("id, nome").eq("id", escola_id).maybeSingle();
   if (!escola) throw new AppError("NOT_FOUND", "Escola não encontrada.");
 
-  const { data: job, error } = await ctx.sb.from("migracao_jobs").insert({
+  const { data: job, error } = await ctx.sb.schema("migracao").from("migracao_jobs").insert({
     escola_id, erp_origem, observacao: observacao ?? null,
     operador_staff_id: ctx.user?.id, status: "rascunho",
   }).select("*").single();
@@ -153,7 +153,7 @@ router.on("migracao_cancelar_job", authStaff, validateInput(jobIdSchema), async 
   const { job_id, motivo } = ctx.body as { job_id: string; motivo?: string };
   const job = await loadJob(ctx, job_id);
   if (job.status === "promovido") throw new AppError("CONFLICT", "Job já promovido — cancelamento bloqueado.");
-  await ctx.sb.from("migracao_jobs").update({
+  await ctx.sb.schema("migracao").from("migracao_jobs").update({
     status: "cancelado",
     observacao: motivo ? `[CANCELADO] ${motivo}` : (job.observacao as string ?? null),
   }).eq("id", job_id);
@@ -165,7 +165,7 @@ router.on("migracao_job_resumo", authStaff, validateInput(jobIdSchema), async (c
   const { job_id } = ctx.body as { job_id: string };
   await loadJob(ctx, job_id);
   const { data: resumo } = await ctx.sb.from("v_migracao_job_resumo").select("*").eq("job_id", job_id).maybeSingle();
-  const { data: arquivos } = await ctx.sb.from("migracao_arquivos")
+  const { data: arquivos } = await ctx.sb.schema("migracao").from("migracao_arquivos")
     .select("id, nome_original, entidade_alvo, linhas_total, linhas_parseadas, enviado_em")
     .eq("job_id", job_id).order("enviado_em", { ascending: false });
   return successResponse({ resumo, arquivos: arquivos ?? [] });
@@ -175,7 +175,7 @@ router.on("migracao_job_resumo", authStaff, validateInput(jobIdSchema), async (c
 router.on("migracao_audit_timeline", authStaff, validateInput(jobIdSchema), async (ctx: Context) => {
   const { job_id } = ctx.body as { job_id: string };
   await loadJob(ctx, job_id);
-  const { data, error } = await ctx.sb.from("migracao_audit")
+  const { data, error } = await ctx.sb.schema("migracao").from("migracao_audit")
     .select("id, acao, detalhes, operador_nome, operador_staff_id, ip, criado_em")
     .eq("job_id", job_id).order("criado_em", { ascending: false }).limit(500);
   if (error) throw new AppError("INTERNAL_ERROR", error.message);
@@ -215,7 +215,7 @@ router.on("migracao_upload_arquivo", authStaff, validateInput(uploadSchema), asy
   // hash sha256 do conteúdo (pra detectar uploads duplicados)
   const hash = await sha256Bytes(bytes);
 
-  const { data: arq, error } = await ctx.sb.from("migracao_arquivos").insert({
+  const { data: arq, error } = await ctx.sb.schema("migracao").from("migracao_arquivos").insert({
     job_id, escola_id: ctx.escola_id,
     nome_original: nome, storage_path: path, mime: contentType,
     tamanho_bytes: bytes.byteLength, sha256: hash,
@@ -223,7 +223,7 @@ router.on("migracao_upload_arquivo", authStaff, validateInput(uploadSchema), asy
   }).select("*").single();
   if (error) throw new AppError("INTERNAL_ERROR", error.message);
 
-  await ctx.sb.from("migracao_jobs").update({
+  await ctx.sb.schema("migracao").from("migracao_jobs").update({
     status: job.status === "rascunho" ? "ingerido" : job.status,
   }).eq("id", job_id);
 
@@ -244,7 +244,7 @@ router.on("migracao_parse", authStaff, validateInput(jobIdSchema), async (ctx: C
   }
 
   // Lista arquivos ainda não totalmente parseados
-  const { data: arquivos } = await ctx.sb.from("migracao_arquivos")
+  const { data: arquivos } = await ctx.sb.schema("migracao").from("migracao_arquivos")
     .select("*").eq("job_id", job_id);
   if (!arquivos || arquivos.length === 0) {
     throw new AppError("CONFLICT", "Job não tem arquivos para parsear.");
@@ -268,11 +268,11 @@ router.on("migracao_parse", authStaff, validateInput(jobIdSchema), async (ctx: C
         origem_arquivo_id: arquivoId, origem_linha: p.linha, origem_hash: p.hash,
         ...p.data,
       }));
-      const { error: insErr } = await ctx.sb.from(table).insert(chunk);
+      const { error: insErr } = await ctx.sb.schema("migracao").from(table).insert(chunk);
       if (insErr) {
         const filtered = await dedupeByHash(ctx.sb, table, job_id, chunk);
         if (filtered.length > 0) {
-          const { error: e2 } = await ctx.sb.from(table).insert(filtered);
+          const { error: e2 } = await ctx.sb.schema("migracao").from(table).insert(filtered);
           if (e2) throw new AppError("INTERNAL_ERROR", `Insert staging ${entidade}: ${e2.message}`);
           inserted += filtered.length;
         }
@@ -289,7 +289,7 @@ router.on("migracao_parse", authStaff, validateInput(jobIdSchema), async (ctx: C
 
     const { data: blob, error: dlErr } = await ctx.sb.storage.from("migracao-anexos").download(a.storage_path);
     if (dlErr || !blob) {
-      await ctx.sb.from("migracao_jobs").update({ status: "erro" }).eq("id", job_id);
+      await ctx.sb.schema("migracao").from("migracao_jobs").update({ status: "erro" }).eq("id", job_id);
       throw new AppError("INTERNAL_ERROR", `Falha ao baixar ${a.nome_original}: ${dlErr?.message ?? "blob vazio"}`);
     }
     const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -334,7 +334,7 @@ router.on("migracao_parse", authStaff, validateInput(jobIdSchema), async (ctx: C
       sheetsProcessadas.push({ sheet: s.name, entidade: entAlvo, linhas: parsed.length });
     }
 
-    await ctx.sb.from("migracao_arquivos").update({
+    await ctx.sb.schema("migracao").from("migracao_arquivos").update({
       linhas_total: totalLinhasArquivo,
       linhas_parseadas: totalParseadasArquivo,
     }).eq("id", a.id);
@@ -348,7 +348,7 @@ router.on("migracao_parse", authStaff, validateInput(jobIdSchema), async (ctx: C
     }
   }
 
-  await ctx.sb.from("migracao_jobs").update({
+  await ctx.sb.schema("migracao").from("migracao_jobs").update({
     status: "parseado", parseado_em: new Date().toISOString(),
     erp_origem: erpAuto, resumo,
   }).eq("id", job_id);
@@ -372,7 +372,7 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
   const warns: Record<string, number> = {};
 
   // ── Alunos ─────────────────────────────────────────────────
-  const { data: alunos } = await ctx.sb.from("migracao_staging_alunos")
+  const { data: alunos } = await ctx.sb.schema("migracao").from("migracao_staging_alunos")
     .select("id, nome, email, cpf, data_nascimento, responsavel_email, responsavel_cpf")
     .eq("job_id", job_id).eq("ignorado", false);
   for (const a of alunos ?? []) {
@@ -384,7 +384,7 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
     if (!r.responsavel_email && !r.responsavel_cpf)
       flags.push({ code: "sem_responsavel", msg: "Aluno sem responsável — bloqueia LGPD (menor).", severity: "error" });
     const ok = !flags.some(f => f.severity === "error");
-    await ctx.sb.from("migracao_staging_alunos").update({ flags, is_valido: ok }).eq("id", r.id);
+    await ctx.sb.schema("migracao").from("migracao_staging_alunos").update({ flags, is_valido: ok }).eq("id", r.id);
     flags.forEach(f => {
       if (f.severity === "error") erros[f.code] = (erros[f.code] ?? 0) + 1;
       else warns[f.code] = (warns[f.code] ?? 0) + 1;
@@ -392,7 +392,7 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
   }
 
   // ── Responsáveis ───────────────────────────────────────────
-  const { data: resps } = await ctx.sb.from("migracao_staging_responsaveis")
+  const { data: resps } = await ctx.sb.schema("migracao").from("migracao_staging_responsaveis")
     .select("id, nome, email, cpf, aluno_email").eq("job_id", job_id).eq("ignorado", false);
   for (const r of resps ?? []) {
     const flags: { code: string; msg: string; severity: "info"|"warn"|"error" }[] = [];
@@ -411,7 +411,7 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
       matchId = (fam as any)?.id ?? null;
     }
     if (matchId) flags.push({ code: "match_familia_existente", msg: "Família já cadastrada — será atualizada.", severity: "info" });
-    await ctx.sb.from("migracao_staging_responsaveis").update({ flags, is_valido: ok, match_familia_id: matchId }).eq("id", x.id);
+    await ctx.sb.schema("migracao").from("migracao_staging_responsaveis").update({ flags, is_valido: ok, match_familia_id: matchId }).eq("id", x.id);
     flags.forEach(f => {
       if (f.severity === "error") erros[f.code] = (erros[f.code] ?? 0) + 1;
       else if (f.severity === "warn") warns[f.code] = (warns[f.code] ?? 0) + 1;
@@ -419,7 +419,7 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
   }
 
   // ── Turmas ─────────────────────────────────────────────────
-  const { data: turmas } = await ctx.sb.from("migracao_staging_turmas")
+  const { data: turmas } = await ctx.sb.schema("migracao").from("migracao_staging_turmas")
     .select("id, nome, ano").eq("job_id", job_id).eq("ignorado", false);
   for (const t of turmas ?? []) {
     const flags: { code: string; msg: string; severity: "info"|"warn"|"error" }[] = [];
@@ -435,12 +435,12 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
     }
     if (matchId) flags.push({ code: "match_serie_existente", msg: "Série já existe — vamos reutilizar.", severity: "info" });
     const ok = !flags.some(f => f.severity === "error");
-    await ctx.sb.from("migracao_staging_turmas").update({ flags, is_valido: ok, match_serie_id: matchId }).eq("id", x.id);
+    await ctx.sb.schema("migracao").from("migracao_staging_turmas").update({ flags, is_valido: ok, match_serie_id: matchId }).eq("id", x.id);
     flags.forEach(f => { if (f.severity === "error") erros[f.code] = (erros[f.code] ?? 0) + 1; });
   }
 
   // ── Funcionários ───────────────────────────────────────────
-  const { data: funcs } = await ctx.sb.from("migracao_staging_funcionarios")
+  const { data: funcs } = await ctx.sb.schema("migracao").from("migracao_staging_funcionarios")
     .select("id, nome, email, cpf, cargo").eq("job_id", job_id).eq("ignorado", false);
   for (const f of funcs ?? []) {
     const flags: { code: string; msg: string; severity: "info"|"warn"|"error" }[] = [];
@@ -451,7 +451,7 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
     const papelLumied = mapCargoToPapel(x.cargo);
     if (!papelLumied) flags.push({ code: "papel_indefinido", msg: "Cargo não mapeia para papel Lumied — promoção ignora este registro.", severity: "warn" });
     const ok = !flags.some(f => f.severity === "error");
-    await ctx.sb.from("migracao_staging_funcionarios").update({ flags, is_valido: ok, papel_lumied: papelLumied }).eq("id", x.id);
+    await ctx.sb.schema("migracao").from("migracao_staging_funcionarios").update({ flags, is_valido: ok, papel_lumied: papelLumied }).eq("id", x.id);
     flags.forEach(f => {
       if (f.severity === "error") erros[f.code] = (erros[f.code] ?? 0) + 1;
       else warns[f.code] = (warns[f.code] ?? 0) + 1;
@@ -459,7 +459,7 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
   }
 
   // ── Financeiro ─────────────────────────────────────────────
-  const { data: fins } = await ctx.sb.from("migracao_staging_financeiro")
+  const { data: fins } = await ctx.sb.schema("migracao").from("migracao_staging_financeiro")
     .select("id, tipo, valor, data_vencimento, status_lumied, familia_email, familia_cpf, descricao")
     .eq("job_id", job_id).eq("ignorado", false);
   for (const t of fins ?? []) {
@@ -474,7 +474,7 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
     if (x.familia_cpf && !isValidCpf(x.familia_cpf) && !isValidCnpj(x.familia_cpf))
       flags.push({ code: "cpf_familia_invalido", msg: "CPF/CNPJ da família inválido.", severity: "warn" });
     const ok = !flags.some(f => f.severity === "error");
-    await ctx.sb.from("migracao_staging_financeiro").update({ flags, is_valido: ok }).eq("id", x.id);
+    await ctx.sb.schema("migracao").from("migracao_staging_financeiro").update({ flags, is_valido: ok }).eq("id", x.id);
     flags.forEach(f => {
       if (f.severity === "error") erros[f.code] = (erros[f.code] ?? 0) + 1;
       else warns[f.code] = (warns[f.code] ?? 0) + 1;
@@ -482,12 +482,12 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
   }
 
   // ── Matrículas / Notas: validação mínima (não bloqueante) ─
-  await ctx.sb.from("migracao_staging_matriculas")
+  await ctx.sb.schema("migracao").from("migracao_staging_matriculas")
     .update({ flags: [], is_valido: true }).eq("job_id", job_id).eq("ignorado", false);
-  await ctx.sb.from("migracao_staging_notas")
+  await ctx.sb.schema("migracao").from("migracao_staging_notas")
     .update({ flags: [], is_valido: true }).eq("job_id", job_id).eq("ignorado", false);
 
-  await ctx.sb.from("migracao_jobs").update({
+  await ctx.sb.schema("migracao").from("migracao_jobs").update({
     status: "validado", validado_em: new Date().toISOString(),
     resumo: { erros, warns },
   }).eq("id", job_id);
@@ -537,7 +537,7 @@ router.on("migracao_resumo_flags", authStaff, validateInput(jobIdSchema), async 
 
   for (const ent of entidades) {
     const table = STAGING_TABLES[ent];
-    const { data, error } = await ctx.sb.from(table)
+    const { data, error } = await ctx.sb.schema("migracao").from(table)
       .select("flags").eq("job_id", job_id).eq("ignorado", false);
     if (error) continue;
     const agg: Record<string, { count: number; severity: string; msg: string }> = {};
@@ -604,7 +604,7 @@ async function colherAlvoRollback(ctx: Context, job_id: string, promovido_em: st
   const finIds = (finQ.data ?? []).map((r: any) => r.id).filter(Boolean);
 
   // familias criadas (match_familia_id NULL) e seus emails (pra cascade em alunos)
-  const { data: respStaging } = await ctx.sb.from("migracao_staging_responsaveis")
+  const { data: respStaging } = await ctx.sb.schema("migracao").from("migracao_staging_responsaveis")
     .select("promovido_id, email, match_familia_id")
     .eq("job_id", job_id).not("promovido_id", "is", null);
   // deno-lint-ignore no-explicit-any
@@ -613,14 +613,14 @@ async function colherAlvoRollback(ctx: Context, job_id: string, promovido_em: st
   const familiasEmails = (respStaging ?? []).filter((r: any) => !r.match_familia_id).map((r: any) => (r.email || "").toLowerCase()).filter(Boolean);
 
   // series criadas (match_serie_id NULL)
-  const { data: turmaStaging } = await ctx.sb.from("migracao_staging_turmas")
+  const { data: turmaStaging } = await ctx.sb.schema("migracao").from("migracao_staging_turmas")
     .select("promovido_id, match_serie_id")
     .eq("job_id", job_id).not("promovido_id", "is", null);
   // deno-lint-ignore no-explicit-any
   const seriesCriadas = (turmaStaging ?? []).filter((r: any) => !r.match_serie_id).map((r: any) => r.promovido_id).filter(Boolean);
 
   // usuarios: separa criados (DELETE) vs já existentes (remover papel apenas)
-  const { data: funcStaging } = await ctx.sb.from("migracao_staging_funcionarios")
+  const { data: funcStaging } = await ctx.sb.schema("migracao").from("migracao_staging_funcionarios")
     .select("promovido_id, papel_lumied")
     .eq("job_id", job_id).not("promovido_id", "is", null);
   // deno-lint-ignore no-explicit-any
@@ -770,7 +770,7 @@ router.on("migracao_rollback", authStaff, validateInput(jobIdSchema), async (ctx
   }
 
   // 8. Volta status do job pra 'validado'
-  await ctx.sb.from("migracao_jobs").update({
+  await ctx.sb.schema("migracao").from("migracao_jobs").update({
     status: "validado",
     promovido_em: null,
     resumo: { ...(job.resumo as Record<string, unknown> ?? {}), rollback: undone, rollback_em: new Date().toISOString() },
@@ -794,7 +794,7 @@ router.on("migracao_pos_promote_amostra", authStaff, validateInput(jobIdSchema),
 
   // Para cada staging com promovido_id, busca os IDs canônicos
   async function colher(stagingTable: string, canonTable: string, cols: string): Promise<{ sample: unknown[]; total_promovidos: number }> {
-    const { data: ids } = await ctx.sb.from(stagingTable)
+    const { data: ids } = await ctx.sb.schema("migracao").from(stagingTable)
       .select("promovido_id").eq("job_id", job_id).not("promovido_id", "is", null);
     // deno-lint-ignore no-explicit-any
     const idList = (ids ?? []).map((r: any) => r.promovido_id).filter(Boolean);
@@ -873,11 +873,12 @@ router.on("migracao_promover_preview", authStaff, validateInput(jobIdSchema), as
 
   for (const ent of entidades) {
     const table = STAGING_TABLES[ent];
+    const mig = ctx.sb.schema("migracao");
     const [totalQ, validosQ, ignoradosQ] = await Promise.all([
-      ctx.sb.from(table).select("id", { count: "exact", head: true }).eq("job_id", job_id),
-      ctx.sb.from(table).select("id", { count: "exact", head: true })
+      mig.from(table).select("id", { count: "exact", head: true }).eq("job_id", job_id),
+      mig.from(table).select("id", { count: "exact", head: true })
         .eq("job_id", job_id).eq("is_valido", true).eq("ignorado", false),
-      ctx.sb.from(table).select("id", { count: "exact", head: true })
+      mig.from(table).select("id", { count: "exact", head: true })
         .eq("job_id", job_id).eq("ignorado", true),
     ]);
     const total = totalQ.count ?? 0;
@@ -907,7 +908,7 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
   // → matrículas (atualiza serie_id de alunos) → funcionários → financeiro → notas
 
   // ── Responsáveis → familias (trigger sincroniza alunos automaticamente) ──
-  const { data: resps } = await ctx.sb.from("migracao_staging_responsaveis")
+  const { data: resps } = await ctx.sb.schema("migracao").from("migracao_staging_responsaveis")
     .select("id, nome, email, cpf, telefone, whatsapp, endereco, cidade, uf, cep, aluno_email, aluno_cpf, match_familia_id")
     .eq("job_id", job_id).eq("is_valido", true).eq("ignorado", false);
 
@@ -916,7 +917,7 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
     const x = r as any;
     const email = normEmail(x.email);
     // Procura aluno staging vinculado pra preencher nome_aluno/serie
-    const { data: alunoLinked } = await ctx.sb.from("migracao_staging_alunos")
+    const { data: alunoLinked } = await ctx.sb.schema("migracao").from("migracao_staging_alunos")
       .select("nome, data_nascimento, cpf, serie_origem")
       .eq("job_id", job_id).eq("ignorado", false)
       .or(`responsavel_email.eq.${email},responsavel_cpf.eq.${x.cpf ?? ""}`)
@@ -956,14 +957,14 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
       // deno-lint-ignore no-explicit-any
       resId = (ins as any).id;
     }
-    await ctx.sb.from("migracao_staging_responsaveis").update({
+    await ctx.sb.schema("migracao").from("migracao_staging_responsaveis").update({
       promovido_id: resId, promovido_em: new Date().toISOString(),
     }).eq("id", x.id);
     counts.familias = (counts.familias ?? 0) + 1;
   }
 
   // ── Turmas → series (reutiliza match ou cria) ──
-  const { data: turmas } = await ctx.sb.from("migracao_staging_turmas")
+  const { data: turmas } = await ctx.sb.schema("migracao").from("migracao_staging_turmas")
     .select("id, nome, ano, turno, ordem, match_serie_id")
     .eq("job_id", job_id).eq("is_valido", true).eq("ignorado", false);
   const turmaNomeToSerie = new Map<string, string>();
@@ -980,7 +981,7 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
       // deno-lint-ignore no-explicit-any
       serieId = (ins as any).id;
     }
-    await ctx.sb.from("migracao_staging_turmas").update({
+    await ctx.sb.schema("migracao").from("migracao_staging_turmas").update({
       promovido_id: serieId, promovido_em: new Date().toISOString(),
     }).eq("id", x.id);
     turmaNomeToSerie.set(normName(x.nome), serieId!);
@@ -988,7 +989,7 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
   }
 
   // ── Matrículas → atualiza serie_id em alunos ──
-  const { data: matrs } = await ctx.sb.from("migracao_staging_matriculas")
+  const { data: matrs } = await ctx.sb.schema("migracao").from("migracao_staging_matriculas")
     .select("id, aluno_email, aluno_cpf, turma_origem, ano, status")
     .eq("job_id", job_id).eq("is_valido", true).eq("ignorado", false);
   for (const m of matrs ?? []) {
@@ -1001,13 +1002,13 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
       ativo: x.status === "matriculado",
     }).eq("escola_id", escolaId).eq("email", normEmail(x.aluno_email));
     if (!error) counts.matriculas = (counts.matriculas ?? 0) + 1;
-    await ctx.sb.from("migracao_staging_matriculas").update({
+    await ctx.sb.schema("migracao").from("migracao_staging_matriculas").update({
       promovido_id: null, promovido_em: new Date().toISOString(),
     }).eq("id", x.id);
   }
 
   // ── Funcionários → rh_funcionarios + usuarios (papel mapeado) ──
-  const { data: funcs } = await ctx.sb.from("migracao_staging_funcionarios")
+  const { data: funcs } = await ctx.sb.schema("migracao").from("migracao_staging_funcionarios")
     .select("id, nome, email, cpf, telefone, cargo, papel_lumied")
     .eq("job_id", job_id).eq("is_valido", true).eq("ignorado", false);
   for (const f of funcs ?? []) {
@@ -1024,7 +1025,7 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
       const papeis = new Set<string>(cur.papeis ?? []);
       papeis.add(x.papel_lumied);
       await ctx.sb.from("usuarios").update({ papeis: Array.from(papeis), nome: x.nome }).eq("id", cur.id);
-      await ctx.sb.from("migracao_staging_funcionarios").update({
+      await ctx.sb.schema("migracao").from("migracao_staging_funcionarios").update({
         promovido_id: cur.id, promovido_em: new Date().toISOString(),
       }).eq("id", x.id);
     } else if (email) {
@@ -1038,7 +1039,7 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
         continue;
       }
       // deno-lint-ignore no-explicit-any
-      await ctx.sb.from("migracao_staging_funcionarios").update({
+      await ctx.sb.schema("migracao").from("migracao_staging_funcionarios").update({
         promovido_id: (ins as any).id, promovido_em: new Date().toISOString(),
       }).eq("id", x.id);
     }
@@ -1046,7 +1047,7 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
   }
 
   // ── Financeiro → fin_lancamentos ──
-  const { data: fins } = await ctx.sb.from("migracao_staging_financeiro")
+  const { data: fins } = await ctx.sb.schema("migracao").from("migracao_staging_financeiro")
     .select("id, tipo, descricao, valor, data_lancamento, data_vencimento, data_pagamento, status_lumied, fornecedor, familia_email, familia_nome, documento, observacao")
     .eq("job_id", job_id).eq("is_valido", true).eq("ignorado", false);
 
@@ -1079,13 +1080,13 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
       if (error) throw new AppError("INTERNAL_ERROR", `fin_lancamentos: ${error.message}`);
     }
     counts.fin_lancamentos = finChunk.length;
-    await ctx.sb.from("migracao_staging_financeiro").update({
+    await ctx.sb.schema("migracao").from("migracao_staging_financeiro").update({
       promovido_em: new Date().toISOString(),
     }).in("id", stagingIds);
   }
 
   // ── Marca job como promovido ──
-  await ctx.sb.from("migracao_jobs").update({
+  await ctx.sb.schema("migracao").from("migracao_jobs").update({
     status: "promovido", promovido_em: new Date().toISOString(),
     resumo: { ...(job.resumo as Record<string, unknown> ?? {}), promovido: counts },
   }).eq("id", job_id);
@@ -1143,7 +1144,7 @@ async function dedupeByHash(
 ): Promise<any[]> {
   const hashes = chunk.map(c => c.origem_hash).filter(Boolean);
   if (hashes.length === 0) return chunk;
-  const { data: existentes } = await sb.from(table)
+  const { data: existentes } = await sb.schema("migracao").from(table)
     .select("origem_hash").eq("job_id", jobId).in("origem_hash", hashes);
   // deno-lint-ignore no-explicit-any
   const set = new Set((existentes ?? []).map((e: any) => e.origem_hash));
