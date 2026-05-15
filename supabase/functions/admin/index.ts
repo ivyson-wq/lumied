@@ -591,6 +591,27 @@ router.on("lap_activation_overview", authAdmin, async (ctx) => {
   });
 });
 
+router.on("lap_qbr_generate", authAdmin, validateInput(escolaIdSchema), async (ctx) => {
+  // Sprint 16 — QBR template
+  const escola_id = ctx.body.escola_id as string;
+  const periodo_dias = Number((ctx.body as any).periodo_dias) || 90;
+  const { buildQbr, qbrToHtml } = await import("../_shared/lap_qbr.ts");
+  const report = await buildQbr(ctx.sb, escola_id, periodo_dias);
+  if (!report) throw new AppError("NOT_FOUND", "Escola não encontrada.");
+  const formato = (ctx.body as any).formato || "json";
+  if (formato === "html") return successResponse({ html: qbrToHtml(report), report });
+  return successResponse({ report });
+});
+
+router.on("lap_cs_playbook", authAdmin, async (ctx) => {
+  // Sprint 13 — Playbook CS tier-based + health-aware
+  const { escola_ids, tier } = ctx.body as { escola_ids?: string[]; tier?: string };
+  const { buildPlaybook, detectTier } = await import("../_shared/lap_cs_playbook.ts");
+  let pb = await buildPlaybook(ctx.sb, escola_ids);
+  if (tier) pb = pb.filter((p) => p.tier === tier);
+  return successResponse({ playbook: pb, gerado_em: new Date().toISOString() });
+});
+
 router.on("lap_activation_recompute", authAdmin, async (ctx) => {
   // Chama refresh_all_lumied_health_scores() — útil pra forçar atualização
   // sem esperar o pg_cron. Idealmente só fundador/CS lead.
@@ -1420,6 +1441,48 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
       },
     ]);
   } catch (_) { /* não bloqueia */ }
+
+  // LAP Sprint 11: Welcome Kit — e-mail automático pós-provisioning
+  const resendKeyWelcome = Deno.env.get("RESEND_API_KEY");
+  if (resendKeyWelcome) {
+    try {
+      const { welcomeKitEmailHtml } = await import("../_shared/lap_welcome_kit.ts");
+      const welcomeHtml = welcomeKitEmailHtml({
+        escola_nome: nome,
+        escola_slug: slug,
+        gerente_nome,
+        gerente_email: emailNorm,
+        plano: planoSlug,
+        url_admin: `https://${slug}.lumied.com.br/admin.html`,
+        url_gerente: `https://${slug}.lumied.com.br/gerente.html`,
+      });
+      // Fire-and-forget (não bloqueia onboarding se Resend falhar)
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKeyWelcome}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Lumied <onboarding@lumied.com.br>",
+          to: [emailNorm],
+          bcc: ["ivyson@gmail.com"],
+          subject: `🎉 Bem-vindo(a) ao Lumied — ${nome} está ativo!`,
+          html: welcomeHtml,
+        }),
+      }).catch(() => {});
+
+      // Trackeia que welcome kit foi disparado
+      const { trackEvent } = await import("../_shared/track.ts");
+      trackEvent(ctx.sb, {
+        escola_id: escola.id,
+        event_name: "onboarding.welcome_kit.enviado",
+        module: "onboarding",
+        persona: "staff_lumied",
+        payload: { canal: "email", destinatario: emailNorm },
+        idempotency_key: `welcome:${escola.id}`,
+      });
+    } catch (e) {
+      console.warn("[staff_criar_escola] welcome kit falhou:", e);
+    }
+  }
 
   return successResponse({
     success: true,

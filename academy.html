@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lumied Academy — Trilhas de capacitação</title>
+<meta name="theme-color" content="#6C63FF">
+<link rel="icon" href="/favicon.png">
+<style>
+:root { --purple:#6C63FF; --blue:#3B82F6; --dark:#1a1a1a; --muted:#64748b; --bg:#fafafa; --border:#e5e7eb; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background: var(--bg); color: var(--dark); }
+header { background: linear-gradient(135deg,var(--purple) 0%,var(--blue) 100%); color: #fff; padding: 36px 24px; text-align: center; }
+header h1 { font-size: 32px; margin: 0 0 6px; font-weight: 800; letter-spacing: -0.02em; }
+header p { font-size: 15px; opacity: 0.92; margin: 0; }
+.container { max-width: 1100px; margin: 0 auto; padding: 30px 20px 60px; }
+.intro { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; margin-bottom: 24px; font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+.intro strong { color: var(--dark); }
+.trilhas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.trilha {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s, border-color .15s;
+}
+.trilha:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(108,99,255,0.12); border-color: #d4ccff; }
+.trilha-icon { font-size: 38px; margin-bottom: 12px; }
+.trilha-titulo { font-size: 16px; font-weight: 800; margin: 0 0 6px; color: var(--dark); }
+.trilha-resumo { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 0 0 14px; min-height: 40px; }
+.trilha-meta { display: flex; align-items: center; gap: 14px; font-size: 11.5px; color: var(--muted); margin-bottom: 12px; }
+.progress { height: 5px; background: #f1f5f9; border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+.progress-bar { height: 100%; background: linear-gradient(90deg,var(--purple),var(--blue)); transition: width .4s; }
+.trilha-cta { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--purple); text-decoration: none; }
+.cert-badge { display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg,#fef3c7,#fde68a); color: #92400e; padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 700; margin-left: 6px; }
+.modal-overlay { position: fixed; inset:0; background: rgba(15,23,42,.55); backdrop-filter: blur(4px); z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; }
+.modal { background:#fff; border-radius:16px; max-width:640px; width:100%; max-height:calc(100vh - 32px); overflow:auto; }
+.modal-head { background: linear-gradient(135deg,var(--purple),var(--blue)); color:#fff; padding:22px 26px; display:flex; justify-content:space-between; }
+.modal-head h2 { font-size:18px; margin:0; font-weight:800; }
+.modal-body { padding:24px 26px; }
+.modal-body h3 { font-size:14.5px; font-weight:700; margin:16px 0 6px; }
+.licao { padding: 10px 14px; background:#fafafa; border:1px solid #f1f5f9; border-radius:8px; margin-bottom:6px; font-size:13px; display:flex; justify-content:space-between; align-items:center; }
+.licao.done { background: #f0fdf4; border-color: #bbf7d0; }
+.licao.done::after { content:'✓'; color:#16a34a; font-weight:800; }
+.modal-foot { padding: 14px 26px 22px; display:flex; justify-content:flex-end; gap:8px; }
+.btn { font-family: inherit; padding:10px 18px; border-radius:9px; font-weight:700; font-size:13px; cursor:pointer; border:none; }
+.btn-primary { background: linear-gradient(135deg,var(--purple),var(--blue)); color:#fff; }
+.btn-ghost { background: transparent; color: var(--muted); }
+.close { background:rgba(255,255,255,0.15); border:none; color:#fff; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:18px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎓 Lumied Academy</h1>
+  <p>Trilhas curtas pra dominar o Lumied em menos de 1h por papel</p>
+</header>
+
+<div class="container">
+  <div class="intro">
+    <strong>Como funciona:</strong> escolha sua trilha (geralmente baseada no seu papel na escola), assista os vídeos curtos
+    (15-20 min cada), responda o quiz no final e ganhe seu <strong>Certificado de Operador Lumied</strong> — válido por 12 meses,
+    com selo verificável no LinkedIn.
+  </div>
+
+  <div class="trilhas" id="trilhasGrid">
+    <!-- Renderizado por JS -->
+  </div>
+</div>
+
+<script src="/config.js"></script>
+<script src="/product-events.js" defer></script>
+<script src="/lumied-help.js" defer></script>
+<link rel="stylesheet" href="/lumied-help.css">
+
+<script>
+const TRILHAS = [
+  {
+    id: 'lumied_em_30',
+    icon: '🚀',
+    titulo: 'Lumied em 30 minutos',
+    resumo: 'Visão completa pra diretor(a) que acabou de chegar. Em 6 lições rápidas você sabe o que é cada módulo e como usar.',
+    duracao: '30 min',
+    licoes: [
+      'Bem-vindo ao Lumied + Setup Wizard',
+      'Painel do gerente — o que olhar todo dia',
+      'Financeiro — o módulo mais importante',
+      'CRM + Comunicação com famílias',
+      'Manutenção, almoxarifado e o resto',
+      'Convidando seu time e delegando',
+    ],
+    quiz: 5,
+  },
+  {
+    id: 'financeiro_zero_fechamento',
+    icon: '💰',
+    titulo: 'Financeiro do zero ao fechamento',
+    resumo: 'Pra time financeiro. De cadastrar mensalidades, gerar boletos, conciliar pagamentos até fechar o mês.',
+    duracao: '45 min',
+    licoes: [
+      'Configurando conta bancária (Inter/Sicredi/BB/Itaú/Bradesco)',
+      'Plano de contas escolar BR',
+      'Mensalidades e emissão de boletos em massa',
+      'Conciliação automática + manual',
+      'PIX integrado',
+      'Régua de cobrança e inadimplência',
+      'Fechamento de mês + DRE',
+    ],
+    quiz: 7,
+  },
+  {
+    id: 'secretaria_moderna',
+    icon: '📋',
+    titulo: 'Secretaria moderna',
+    resumo: 'Pra secretaria. Matricular alunos, gerenciar famílias, lançar atestados e largar de vez o Excel paralelo.',
+    duracao: '40 min',
+    licoes: [
+      'Cadastro de alunos e famílias',
+      'Importação CSV ou migração ERP',
+      'Matrículas e contratos digitais',
+      'Atestados, documentos e atas',
+      'Pickup + autorização de retirada',
+      'Comunicação com famílias',
+    ],
+    quiz: 6,
+  },
+  {
+    id: 'manutencao_sem_planilha',
+    icon: '🔧',
+    titulo: 'Manutenção sem planilha',
+    resumo: 'Pra time de manutenção. Receber chamados, acompanhar SLA, solicitar materiais e fechar dentro do prazo.',
+    duracao: '20 min',
+    licoes: [
+      'Recebendo chamados de pais e profs',
+      'Atribuição a equipes + SLA por urgência',
+      'Solicitar material do almoxarifado',
+      'Fechamento e relatório de custos',
+    ],
+    quiz: 4,
+  },
+];
+
+function getUserKey() {
+  // Identifica usuário pelo token. Pra v1 simples, usamos email do token decodificado
+  // ou um session_id local.
+  let key = localStorage.getItem('lumied_academy_user');
+  if (!key) {
+    key = 'anon_' + Math.random().toString(36).slice(2, 12);
+    localStorage.setItem('lumied_academy_user', key);
+  }
+  return key;
+}
+
+function getProgress(trilhaId) {
+  try { return JSON.parse(localStorage.getItem('lumied_academy_' + trilhaId) || '{}'); }
+  catch (e) { return {}; }
+}
+
+function setProgress(trilhaId, prog) {
+  localStorage.setItem('lumied_academy_' + trilhaId, JSON.stringify(prog));
+}
+
+function renderGrid() {
+  const grid = document.getElementById('trilhasGrid');
+  grid.innerHTML = TRILHAS.map(t => {
+    const prog = getProgress(t.id);
+    const done = (prog.licoes_done || []).length;
+    const total = t.licoes.length;
+    const pct = Math.round((done / total) * 100);
+    const certificado = !!prog.cert_emitido;
+    return `<div class="trilha" data-id="${t.id}">
+      <div class="trilha-icon">${t.icon}</div>
+      <h3 class="trilha-titulo">${t.titulo}${certificado ? '<span class="cert-badge">🏆 Certificado</span>' : ''}</h3>
+      <p class="trilha-resumo">${t.resumo}</p>
+      <div class="trilha-meta">
+        <span>⏱ ${t.duracao}</span>
+        <span>📚 ${total} lições</span>
+        <span>📝 Quiz ${t.quiz}q</span>
+      </div>
+      <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
+      <span class="trilha-cta">${done === 0 ? '▶ Começar' : done === total ? '🏆 Quiz final' : 'Continuar →'}</span>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.trilha').forEach(el => {
+    el.onclick = () => openTrilha(el.getAttribute('data-id'));
+  });
+}
+
+function openTrilha(id) {
+  const t = TRILHAS.find(x => x.id === id);
+  if (!t) return;
+  const prog = getProgress(id);
+  const done = new Set(prog.licoes_done || []);
+
+  const licoesHtml = t.licoes.map((l, i) => {
+    const cls = done.has(i) ? 'licao done' : 'licao';
+    return `<div class="${cls}" data-i="${i}">
+      <span>${i+1}. ${l}</span>
+    </div>`;
+  }).join('');
+
+  const allDone = done.size === t.licoes.length;
+  const certified = !!prog.cert_emitido;
+
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = `<div class="modal">
+    <div class="modal-head">
+      <h2>${t.icon} ${t.titulo}</h2>
+      <button class="close" onclick="this.closest('.modal-overlay').remove()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13.5px;color:var(--muted);margin:0 0 18px">${t.resumo}</p>
+      <h3>Lições</h3>
+      ${licoesHtml}
+      ${allDone ? `<div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:6px;margin-top:18px"><b>🎯 Quiz final disponível</b><br><span style="font-size:12.5px;color:#92400e">${t.quiz} perguntas. Acerte ${Math.ceil(t.quiz * 0.7)}+ pra receber o certificado.</span></div>` : ''}
+      ${certified ? `<div style="background:#dcfce7;border-left:4px solid #16a34a;padding:14px 18px;border-radius:6px;margin-top:18px"><b>🏆 Você já tem o certificado dessa trilha!</b><br><span style="font-size:12.5px;color:#166534">Código: <code>${prog.cert_codigo || '—'}</code></span></div>` : ''}
+    </div>
+    <div class="modal-foot">
+      ${allDone && !certified ? `<button class="btn btn-primary" onclick="fazerQuiz('${t.id}')">📝 Fazer quiz</button>` : ''}
+      ${!allDone ? `<button class="btn btn-primary" onclick="proximaLicao('${t.id}')">▶ ${done.size === 0 ? 'Começar' : 'Continuar'}</button>` : ''}
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Fechar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+function proximaLicao(trilhaId) {
+  const t = TRILHAS.find(x => x.id === trilhaId);
+  const prog = getProgress(trilhaId);
+  const done = new Set(prog.licoes_done || []);
+  const next = t.licoes.findIndex((_, i) => !done.has(i));
+  if (next < 0) return;
+
+  // V1: simula vídeo concluído após 1.5s
+  const ov = document.querySelector('.modal-overlay');
+  if (ov) ov.remove();
+
+  const player = document.createElement('div');
+  player.className = 'modal-overlay';
+  player.innerHTML = `<div class="modal" style="max-width:560px">
+    <div class="modal-head"><h2>📺 Lição ${next+1}: ${t.licoes[next]}</h2><button class="close" onclick="this.closest('.modal-overlay').remove()">×</button></div>
+    <div class="modal-body" style="text-align:center;padding:36px 26px">
+      <div style="background:#1a1a1a;height:240px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;margin-bottom:18px">
+        ▶ Vídeo placeholder (substituir por embed real)
+      </div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6">Esta lição cobre ${t.licoes[next].toLowerCase()}. Quando assistir, clique abaixo pra marcar como concluída.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="marcarConcluida('${trilhaId}',${next})">✓ Concluí esta lição</button>
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Sair</button>
+    </div>
+  </div>`;
+  document.body.appendChild(player);
+  if (window.trackProductEvent) window.trackProductEvent('onboarding.academy.licao_iniciada', { trilha: trilhaId, licao: next });
+}
+
+function marcarConcluida(trilhaId, licaoIdx) {
+  const prog = getProgress(trilhaId);
+  prog.licoes_done = prog.licoes_done || [];
+  if (!prog.licoes_done.includes(licaoIdx)) prog.licoes_done.push(licaoIdx);
+  setProgress(trilhaId, prog);
+  document.querySelector('.modal-overlay')?.remove();
+  if (window.trackProductEvent) window.trackProductEvent('onboarding.academy.licao_concluida', { trilha: trilhaId, licao: licaoIdx });
+  renderGrid();
+  setTimeout(() => openTrilha(trilhaId), 200);
+}
+
+function fazerQuiz(trilhaId) {
+  const t = TRILHAS.find(x => x.id === trilhaId);
+  document.querySelector('.modal-overlay')?.remove();
+
+  // Quiz simulado: gera N perguntas yes/no e exige 70% acerto
+  // V1: passa direto após confirmação. Substituir por banco real depois.
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.innerHTML = `<div class="modal" style="max-width:520px">
+    <div class="modal-head"><h2>📝 Quiz — ${t.titulo}</h2><button class="close" onclick="this.closest('.modal-overlay').remove()">×</button></div>
+    <div class="modal-body">
+      <p style="font-size:14px">Vamos validar que você entendeu o material. ${t.quiz} perguntas. Acerte ${Math.ceil(t.quiz * 0.7)}+ pra liberar seu certificado.</p>
+      <div style="background:#f1f5f9;padding:14px;border-radius:8px;margin:14px 0;font-size:12.5px;color:var(--muted)">
+        Quiz interativo em desenvolvimento. Por ora, clique em <b>"Concluí o quiz"</b> pra simular a aprovação.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="concluirQuiz('${trilhaId}', ${t.quiz})">🏆 Concluí o quiz</button>
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+function concluirQuiz(trilhaId, quizSize) {
+  const t = TRILHAS.find(x => x.id === trilhaId);
+  const prog = getProgress(trilhaId);
+  prog.cert_emitido = true;
+  prog.cert_codigo = 'LUM-OPL-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+  prog.cert_emitido_em = new Date().toISOString();
+  prog.quiz_score = Math.round(quizSize * 0.85); // simula 85% acerto
+  setProgress(trilhaId, prog);
+
+  document.querySelector('.modal-overlay')?.remove();
+  if (window.trackProductEvent) {
+    window.trackProductEvent('onboarding.academy.trilha_concluida', { trilha: trilhaId, score: prog.quiz_score });
+    window.trackProductEvent('onboarding.academy.certificado_emitido', { trilha: trilhaId, codigo: prog.cert_codigo });
+  }
+
+  // Mostra certificado
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.innerHTML = `<div class="modal" style="max-width:560px;text-align:center">
+    <div class="modal-body" style="padding:40px 30px">
+      <div style="font-size:64px;margin-bottom:14px">🏆</div>
+      <h2 style="font-size:22px;font-weight:800;margin:0 0 8px">Parabéns!</h2>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 20px">Você acaba de concluir a trilha <b>${t.titulo}</b>.</p>
+      <div style="background: linear-gradient(135deg,#fef3c7,#fde68a);border:2px dashed #f59e0b;border-radius:14px;padding:22px;margin:20px 0">
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;color:#92400e;text-transform:uppercase;margin-bottom:6px">Certificado de Operador Lumied</div>
+        <div style="font-size:18px;font-weight:800;margin:6px 0">${t.titulo}</div>
+        <code style="font-size:13px;background:rgba(0,0,0,0.05);padding:4px 10px;border-radius:6px;display:inline-block;margin-top:6px">${prog.cert_codigo}</code>
+        <div style="font-size:11px;color:#92400e;margin-top:8px">Verificável em lumied.com.br/verificar</div>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted)">Compartilhe no LinkedIn e adicione ao seu currículo.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove(); window.location.reload()">Fechar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+window.fazerQuiz = fazerQuiz;
+window.concluirQuiz = concluirQuiz;
+window.proximaLicao = proximaLicao;
+window.marcarConcluida = marcarConcluida;
+
+renderGrid();
+</script>
+
+</body>
+</html>

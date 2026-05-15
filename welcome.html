@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Bem-vindo(a) ao Lumied 🎉</title>
+<meta name="theme-color" content="#6C63FF">
+<link rel="icon" href="/favicon.png">
+<style>
+:root { --purple:#6C63FF; --blue:#3B82F6; --dark:#1a1a1a; --muted:#64748b; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background: linear-gradient(135deg,#f5f3ff 0%,#eff6ff 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--dark);
+}
+.card {
+  max-width: 640px;
+  width: 100%;
+  background: #fff;
+  border-radius: 22px;
+  padding: 50px 40px 38px;
+  box-shadow: 0 24px 60px rgba(76,63,160,0.15), 0 8px 24px rgba(0,0,0,0.05);
+  text-align: center;
+}
+.hero-icon { font-size: 64px; margin-bottom: 14px; animation: pop 0.6s cubic-bezier(.4,2,.6,1); }
+@keyframes pop { 0%{ transform:scale(0); opacity:0; } 70%{ transform:scale(1.2); opacity:1;} 100%{ transform:scale(1);} }
+h1 { font-size: 32px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.02em; line-height: 1.15; }
+.sub { font-size: 16px; color: var(--muted); margin: 0 0 32px; line-height: 1.5; }
+.steps { text-align: left; margin: 0 0 30px; }
+.step { display: flex; gap: 14px; padding: 16px 18px; background: linear-gradient(180deg,#fff 0%,#f8fafc 100%); border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 10px; transition: transform .15s, box-shadow .15s; }
+.step:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(108,99,255,0.08); border-color: #e0d9ff; }
+.step-num { background: linear-gradient(135deg,var(--purple),var(--blue)); color: #fff; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+.step-title { font-weight: 700; font-size: 14.5px; margin: 4px 0 4px; color: var(--dark); }
+.step-desc { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0; }
+.cta { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg,var(--purple),var(--blue)); color: #fff; padding: 14px 32px; border-radius: 11px; font-weight: 700; font-size: 15px; text-decoration: none; box-shadow: 0 8px 20px rgba(108,99,255,0.32); transition: transform .12s, box-shadow .12s; }
+.cta:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(108,99,255,0.42); }
+.support { margin-top: 30px; padding-top: 22px; border-top: 1px solid #f1f5f9; font-size: 12.5px; color: var(--muted); }
+.support a { color: var(--purple); text-decoration: none; font-weight: 600; }
+@media (max-width: 480px) {
+  .card { padding: 40px 24px 30px; border-radius: 18px; }
+  h1 { font-size: 26px; }
+  .step { padding: 14px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="hero-icon">🎉</div>
+  <h1>Bem-vindo(a) ao Lumied</h1>
+  <p class="sub">Sua escola está oficialmente no ar. Em 2 minutos você vai estar usando.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">Personalize seu painel</div>
+        <p class="step-desc">O Setup Wizard de 5 passos vai te mostrar a configuração ideal pro seu papel, qtd de alunos e momento do ano letivo.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">Siga o checklist 🚀</div>
+        <p class="step-desc">12 itens contextualizados pra deixar seu Lumied 100% pronto: configurar banco, 1ª cobrança, convidar colegas, abrir 1º chamado, etc.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">Convide seu time</div>
+        <p class="step-desc">Use o botão "👥 Convidar" pra enviar link mágico via WhatsApp ou Email. Eles entram sem senha, com o papel certo.</p>
+      </div>
+    </div>
+  </div>
+
+  <a class="cta" id="ctaEnter" href="/gerente.html">Entrar no Lumied →</a>
+
+  <div class="support">
+    Precisa de ajuda?
+    <a href="https://wa.me/5554997021634?text=Acabei%20de%20entrar%20no%20Lumied%20e%20preciso%20de%20ajuda" target="_blank">Fale conosco no WhatsApp</a>
+  </div>
+</div>
+
+<script src="/config.js"></script>
+<script src="/product-events.js" defer></script>
+<script>
+  // Track welcome view
+  setTimeout(function() {
+    if (window.trackProductEvent) {
+      window.trackProductEvent('onboarding.welcome.visualizado', { source: 'welcome.html' });
+    }
+  }, 1000);
+</script>
+</body>
+</html>
