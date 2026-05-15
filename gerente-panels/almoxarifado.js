@@ -968,9 +968,10 @@
 
   async function almLoadCompras() {
     const status = document.getElementById('almComprasStatus').value;
+    const origem = document.getElementById('almComprasOrigem')?.value || '';
     document.getElementById('almComprasLoading').style.display = 'block';
     document.getElementById('almComprasList').innerHTML = '';
-    const d = await callDiplomas({ action: 'alm_compras_todas', status });
+    const d = await callDiplomas({ action: 'alm_compras_todas', status, origem });
     document.getElementById('almComprasLoading').style.display = 'none';
     almComprasItems = d.data || [];
 
@@ -987,9 +988,11 @@
     const q = (document.getElementById('almComprasSearch')?.value || '').toLowerCase().trim();
     const items = !q ? almComprasItems : almComprasItems.filter(c => {
       const req = c.alm_requisicoes || {};
+      const manut = c.manutencao || {};
       const hay = [
         c.insumo_nome, c.produto_nome, c.plataforma,
         req.professoras?.nome, req.series?.nome,
+        manut.descricao, manut.localizacao,
       ].filter(Boolean).join(' ').toLowerCase();
       return hay.includes(q);
     });
@@ -1017,11 +1020,21 @@
           const prof  = req.professoras?.nome || '—';
           const comprado = c.status === 'comprado';
           const cancelado = c.status === 'cancelado';
-          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:1.5px solid ${comprado?'#bbf7d0':cancelado?'#f5f5f5':'var(--border)'};border-radius:10px;margin-bottom:6px;flex-wrap:wrap;">
+          const manut = c.manutencao;
+          const isManut = c.origem === 'manutencao';
+          const ctxLine = isManut && manut
+            ? `<div style="font-size:11px;color:#92400e;">🔧 ${esc(manut.descricao?.substring(0,60) || 'Manutenção')} · ${esc(manut.localizacao || '')}</div>`
+            : `<div style="font-size:11px;color:var(--muted);">${prof} · ${turma} · ${req.mes ? almMesBR(req.mes) : '—'}</div>`;
+          const aprovFin = c.aprovado_financeiro === null
+            ? '<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:10px;font-weight:600;margin-left:6px;" title="Acima do teto — aguarda aprovação do financeiro">⏳ aprov. financeira</span>'
+            : c.aprovado_financeiro === false
+            ? '<span style="font-size:10px;background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:10px;font-weight:600;margin-left:6px;">✕ rejeitado fin.</span>'
+            : '';
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:1.5px solid ${comprado?'#bbf7d0':cancelado?'#f5f5f5':isManut?'#fde68a':'var(--border)'};border-radius:10px;margin-bottom:6px;flex-wrap:wrap;">
             ${!comprado && !cancelado ? `<input type="checkbox" class="alm-compra-chk" data-id="${c.id}" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">` : '<span style="width:16px;flex-shrink:0;"></span>'}
             <div style="flex:1;min-width:160px;">
-              <div style="font-weight:600;font-size:13px;">${c.insumo_nome}</div>
-              <div style="font-size:11px;color:var(--muted);">${prof} · ${turma} · ${req.mes ? almMesBR(req.mes) : '—'}</div>
+              <div style="font-weight:600;font-size:13px;">${c.insumo_nome}${aprovFin}</div>
+              ${ctxLine}
               ${c.produto_nome ? `<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;">${c.produto_nome}</div>` : ''}
             </div>
             <div style="text-align:right;flex-shrink:0;">
@@ -1042,6 +1055,11 @@
               ? `<span style="background:#f0fff4;color:#2d7a2d;border:1px solid #bbf7d0;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;">✅ Comprado</span>`
               : cancelado
               ? `<span style="color:var(--muted);font-size:11px;">Cancelado</span>`
+              : c.aprovado_financeiro === null
+              ? `<button onclick="almAprovarFinanceiro(['${c.id}'], true)" style="background:#d97706;color:#fff;border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">💰 Aprovar p/ compra</button>
+                 <button onclick="almAprovarFinanceiro(['${c.id}'], false)" style="background:#fff;color:#991b1b;border:1.5px solid #fecaca;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">✕ Rejeitar</button>`
+              : c.aprovado_financeiro === false
+              ? `<button onclick="almCancelarCompra('${c.id}')" style="background:#fff;color:#991b1b;border:1.5px solid #fecaca;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">Cancelar</button>`
               : `<button onclick="almMarcarComprado(['${c.id}'])" style="background:#2d7a2d;color:#fff;border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">✅ Marcar comprado</button>`
             }
           </div>`;
@@ -1071,6 +1089,24 @@
     const ids = Array.from(checks).map(c => c.dataset.id);
     if (!ids.length) { showToast('Selecione ao menos um item.', 'warning'); return; }
     await almMarcarComprado(ids);
+  }
+
+  // Aprovação financeira (compras ≥ teto). Pode aprovar: gerente, diretor, financeiro.
+  async function almAprovarFinanceiro(ids, aprovar) {
+    if (!ids?.length) return;
+    if (!aprovar && !await _lumiedConfirm('Rejeitar essa compra? O item ficará bloqueado até ser cancelado.')) return;
+    const d = await callDiplomas({ action: 'alm_compra_aprovar_financeiro', ids, decisao: aprovar ? 'aprovar' : 'rejeitar' });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast(aprovar ? '✅ Compra aprovada.' : '✕ Compra rejeitada.', 'success');
+    almLoadCompras();
+  }
+  async function almCancelarCompra(id) {
+    if (!id) return;
+    if (!await _lumiedConfirm('Cancelar essa compra?')) return;
+    const d = await callDiplomas({ action: 'alm_cancelar_compra', id });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Compra cancelada.', 'success');
+    almLoadCompras();
   }
 
   // ── Criar Requisição (gerente em nome de professora) ──────

@@ -79,6 +79,7 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
     'alm_compras_compilado', 'alm_distribuir_grupo',
     'alm_compras_compilado_pdf', 'alm_compras_compilado_xlsx',
     'alm_insumos_referencia_suspeita', 'alm_insumos_corrigir_referencia_suspeita',
+    'alm_compra_aprovar_financeiro',
   ].includes(action)
 
   if (isAlmCompraAction) {
@@ -129,6 +130,7 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
           url_carrinho:    it.url_carrinho|| null,
           encaminhado_por: gerente.nome,
           escola_id: (gerente as any).escola_id,
+          aprovado_financeiro: true,  // fluxo de turma: requisição já passou pela aprovação do orçamento
           _skip: qtyFinal <= 0,
         }
       }).filter((r: any) => !r._skip).map(({ _skip, ...rest }: any) => rest)
@@ -471,19 +473,67 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
 
     if (action === 'alm_compras_todas') {
       const status: string = body.status || ''
+      const origem: string = body.origem || ''
       let q = sb.from('alm_compras')
         .select('*, alm_requisicoes(mes, professoras(nome), series(nome))')
         .eq('escola_id', (gerente as any).escola_id)
         .order('encaminhado_em', { ascending: false })
         .limit(200)
       if (status) q = q.eq('status', status)
+      if (origem) q = q.eq('origem', origem)
       const { data } = await q
-      return json({ data: data ?? [] })
+      // Anexa contexto da manutenção para linhas com origem='manutencao' (batch)
+      const rows = (data ?? []) as any[]
+      const manutIds = Array.from(new Set(rows.filter(r => r.origem === 'manutencao' && r.origem_id).map(r => r.origem_id))) as string[]
+      if (manutIds.length) {
+        const { data: manuts } = await sb.from('manutencoes')
+          .select('id, descricao, localizacao, urgencia, status, equipe_responsavel')
+          .eq('escola_id', (gerente as any).escola_id).in('id', manutIds)
+        const idx: Record<string, any> = {}
+        for (const m of (manuts ?? []) as any[]) idx[m.id] = m
+        for (const r of rows) if (r.origem === 'manutencao' && r.origem_id) r.manutencao = idx[r.origem_id] || null
+      }
+      return json({ data: rows })
+    }
+
+    // Aprovação financeira (compras acima do teto). Quem aprova: papel
+    // financeiro, diretor ou gerente. Almoxarifado NÃO aprova financeiro.
+    if (action === 'alm_compra_aprovar_financeiro') {
+      const { ids, decisao } = body as { ids: string[]; decisao: 'aprovar' | 'rejeitar' }
+      if (!ids?.length) return json({ error: 'IDs não informados.' }, 400)
+      const papeis: string[] = ((gerente as any).papeis as string[]) || []
+      const podeAprovar = papeis.includes('gerente') || papeis.includes('diretor') || papeis.includes('financeiro')
+      if (!podeAprovar) return json({ error: 'Apenas gerente, diretor ou financeiro podem aprovar compras.' }, 403)
+      const aprov = decisao !== 'rejeitar'
+      const { data: updated, error } = await sb.from('alm_compras').update({
+        aprovado_financeiro: aprov,
+        aprovado_financeiro_em: new Date().toISOString(),
+        aprovado_financeiro_por: (gerente as any).nome || null,
+      }).in('id', ids).eq('escola_id', (gerente as any).escola_id).select('id')
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true, atualizados: updated?.length ?? 0, decisao: aprov ? 'aprovado' : 'rejeitado' })
     }
 
     if (action === 'alm_marcar_comprado') {
       const { ids } = body   // array of alm_compras IDs
       if (!ids?.length) return json({ error: 'IDs não informados.' }, 400)
+      // Gate financeiro: bloqueia se algum item ainda precisa de aprovação
+      const { data: pendAprov } = await sb.from('alm_compras')
+        .select('id, insumo_nome')
+        .in('id', ids).eq('escola_id', (gerente as any).escola_id)
+        .is('aprovado_financeiro', null)
+      if (pendAprov?.length) {
+        const nomes = (pendAprov as any[]).map(r => r.insumo_nome).slice(0, 3).join(', ')
+        return json({ error: `Aguardando aprovação financeira: ${nomes}${pendAprov.length > 3 ? ` (+${pendAprov.length - 3})` : ''}.` }, 400)
+      }
+      const { data: rejeitados } = await sb.from('alm_compras')
+        .select('id, insumo_nome')
+        .in('id', ids).eq('escola_id', (gerente as any).escola_id)
+        .eq('aprovado_financeiro', false)
+      if (rejeitados?.length) {
+        const nomes = (rejeitados as any[]).map(r => r.insumo_nome).slice(0, 3).join(', ')
+        return json({ error: `Compra rejeitada pelo financeiro: ${nomes}. Cancele ou solicite revisão.` }, 400)
+      }
       const { data: updated, error } = await sb.from('alm_compras').update({
         status:      'comprado',
         comprado_em:  new Date().toISOString(),

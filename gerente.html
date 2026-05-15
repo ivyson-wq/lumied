@@ -2100,6 +2100,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <option value="comprado">✅ Já comprados</option>
               <option value="">Todos</option>
             </select>
+            <select id="almComprasOrigem" onchange="almLoadCompras()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;" title="Filtra pela origem da solicitação">
+              <option value="">Todas origens</option>
+              <option value="requisicao_turma">📚 Turma</option>
+              <option value="manutencao">🔧 Manutenção</option>
+              <option value="ad_hoc">📦 Avulso</option>
+            </select>
             <button onclick="almMarcarSelecionados()" class="btn-create" style="padding:7px 16px;background:#2d7a2d;" id="almBtnMarcarComprado" title="Selecione os checkboxes na lista abaixo e clique aqui">✅ Marcar Selecionados como Comprado</button>
             <input type="text" id="almComprasSearch" placeholder="🔍 Buscar item, professora, turma, fornecedor…" oninput="debouncedAlmComprasSearch()" style="flex:1;min-width:240px;padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
           </div>

@@ -1258,7 +1258,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const lim = Math.min(Math.max(parseInt(String(limit || 500)) || 500, 1), 2000);
     let q = admin
       .from("manutencoes")
-      .select("id, descricao, localizacao, urgencia, status, equipe_responsavel, foto_url, foto_path, observacao_gerente, data_conclusao, criado_em, atualizado_em, usuario_id, escola_id, pergunta_coordenacao, pergunta_em, pergunta_por, pergunta_resposta, pergunta_respondida_em, usuarios(nome, email)")
+      .select("id, descricao, localizacao, urgencia, status, equipe_responsavel, foto_url, foto_path, observacao_gerente, data_conclusao, criado_em, atualizado_em, usuario_id, escola_id, precisa_material, pergunta_coordenacao, pergunta_em, pergunta_por, pergunta_resposta, pergunta_respondida_em, usuarios(nome, email)")
       .eq("escola_id", sessionEscolaId)
       .order("criado_em", { ascending: false })
       .limit(lim);
@@ -1276,6 +1276,25 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
       if (pa !== pb) return pa - pb;
       return new Date(b.criado_em as string).getTime() - new Date(a.criado_em as string).getTime();
     });
+    // Batch resumo de compras vinculadas (origem=manutencao) — evita N+1 no badge do card
+    const ids = sorted.map(m => (m as Record<string, unknown>).id as string).filter(Boolean);
+    if (ids.length) {
+      const { data: compras } = await admin.from("alm_compras")
+        .select("origem_id, status").eq("escola_id", sessionEscolaId)
+        .eq("origem", "manutencao").in("origem_id", ids);
+      const resumo: Record<string, { pendente: number; comprado: number; entregue: number; cancelado: number; total: number }> = {};
+      for (const c of (compras as Record<string, unknown>[] | null) ?? []) {
+        const oid = c.origem_id as string;
+        const st = c.status as string;
+        if (!resumo[oid]) resumo[oid] = { pendente: 0, comprado: 0, entregue: 0, cancelado: 0, total: 0 };
+        if (st in resumo[oid]) (resumo[oid] as Record<string, number>)[st]++;
+        resumo[oid].total++;
+      }
+      for (const m of sorted) {
+        const mid = (m as Record<string, unknown>).id as string;
+        (m as Record<string, unknown>).compras_resumo = resumo[mid] || null;
+      }
+    }
     return ok(sorted);
   }
   if (action === "manutencao_create") {
@@ -1364,6 +1383,63 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     }).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
+  }
+  // Solicita material pra um chamado de manutenção. Cria 1 linha em alm_compras
+  // por item (origem='manutencao'). Aprovação financeira fica para o painel de
+  // Compras quando preco_total ≥ compra_limite_gerente (escola_config).
+  if (action === "manutencao_solicitar_material") {
+    const { id, itens } = body as { id: string; itens?: Array<Record<string, unknown>> };
+    if (!id) return err("ID do chamado é obrigatório.");
+    if (!Array.isArray(itens) || !itens.length) return err("Adicione pelo menos um item.");
+    const { data: chamado } = await admin
+      .from("manutencoes")
+      .select("id, descricao, escola_id, status")
+      .eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
+    if (!chamado) return err("Chamado não encontrado.", 404);
+    if (chamado.status === "rejeitada") return err("Chamado rejeitado não pode pedir material.");
+    // Lê teto do financeiro (default 300 se config ausente)
+    const { data: cfgRow } = await admin.from("escola_config")
+      .select("valor").eq("escola_id", sessionEscolaId).eq("chave", "compra_limite_gerente").maybeSingle();
+    const limite = Number((cfgRow as { valor?: unknown } | null)?.valor ?? 300) || 300;
+    const rows = itens.map(it => {
+      const qty = Number(it.qty || 1);
+      const preco_unit = it.preco_unit != null ? Number(it.preco_unit) : null;
+      const preco_total = preco_unit != null ? preco_unit * qty : null;
+      const precisa_aprov_fin = preco_total != null && preco_total >= limite;
+      return {
+        requisicao_id: null,
+        origem: "manutencao",
+        origem_id: id,
+        insumo_nome: String(it.insumo_nome || it.nome || "").trim() || "Item sem nome",
+        insumo_id: (it.insumo_id as string) || null,
+        qty,
+        plataforma: String(it.plataforma || "—"),
+        produto_nome: (it.produto_nome as string) || null,
+        preco_unit, preco_total,
+        match_pct: it.match_pct != null ? Number(it.match_pct) : null,
+        url_produto: (it.url_produto as string) || null,
+        url_carrinho: (it.url_carrinho as string) || null,
+        nota: (it.nota as string) || null,
+        encaminhado_por: gerente?.nome || "—",
+        aprovado_financeiro: precisa_aprov_fin ? null : true,
+        escola_id: sessionEscolaId,
+      };
+    });
+    const { error: insErr } = await admin.from("alm_compras").insert(rows);
+    if (insErr) { console.error("[api db error]", insErr); return err(sanitizePgError(insErr)); }
+    await admin.from("manutencoes").update({ precisa_material: true })
+      .eq("id", id).eq("escola_id", sessionEscolaId);
+    return ok({ success: true, criados: rows.length, limite_financeiro: limite });
+  }
+  // Lista compras vinculadas a um chamado de manutenção (usado no modal).
+  if (action === "manutencao_compras_list") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID do chamado é obrigatório.");
+    const { data } = await admin.from("alm_compras")
+      .select("id, insumo_nome, insumo_id, qty, plataforma, produto_nome, preco_unit, preco_total, url_produto, status, encaminhado_em, encaminhado_por, comprado_em, comprado_por, aprovado_financeiro, nota")
+      .eq("escola_id", sessionEscolaId).eq("origem", "manutencao").eq("origem_id", id)
+      .order("encaminhado_em", { ascending: false });
+    return ok({ data: data ?? [] });
   }
 
   // ── Famílias (CRUD) ─────────────────────────────────────
