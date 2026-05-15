@@ -158,9 +158,13 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
     // alm_compras_compilado, _pdf e _xlsx.
     const compilarCompras = async (statusFiltro: string) => {
       const escolaId = (gerente as any).escola_id
+      // Compilado é o fluxo de DISTRIBUIÇÃO POR TURMA — só faz sentido pra
+      // origem=requisicao_turma. Manut/ad_hoc não tem turma destino e seria
+      // agrupada com itens de turma, gerando entregas com requisicao_id null.
       let q = sb.from('alm_compras')
         .select('id, insumo_id, insumo_nome, qty, plataforma, produto_nome, preco_unit, match_pct, url_produto, url_carrinho, status, encaminhado_em, requisicao_id, alm_requisicoes(mes, professoras(nome), series(nome))')
         .eq('escola_id', escolaId)
+        .eq('origem', 'requisicao_turma')
         .order('encaminhado_em', { ascending: false })
       if (statusFiltro !== 'todos') q = q.eq('status', statusFiltro)
       const { data: linhas } = await q
@@ -549,11 +553,24 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
     if (action === 'alm_cancelar_compra') {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
+      const escolaId = (gerente as any).escola_id
+      // Captura origem antes de cancelar pra saber se precisa recalcar manutencoes.precisa_material
+      const { data: compra } = await sb.from('alm_compras')
+        .select('origem, origem_id').eq('id', id).eq('escola_id', escolaId).maybeSingle()
       const { error } = await sb.from('alm_compras')
-        .update({ status: 'cancelado' })
-        .eq('id', id)
-        .eq('escola_id', (gerente as any).escola_id)
+        .update({ status: 'cancelado' }).eq('id', id).eq('escola_id', escolaId)
       if (error) return json({ error: error.message }, 400)
+      // Se era da manutenção e não sobrou nenhuma compra ativa, zera flag precisa_material
+      if (compra?.origem === 'manutencao' && compra.origem_id) {
+        const { count } = await sb.from('alm_compras')
+          .select('id', { count: 'exact', head: true })
+          .eq('escola_id', escolaId).eq('origem', 'manutencao').eq('origem_id', compra.origem_id)
+          .not('status', 'in', '(cancelado)')
+        if (!count) {
+          await sb.from('manutencoes').update({ precisa_material: false })
+            .eq('id', compra.origem_id).eq('escola_id', escolaId)
+        }
+      }
       return json({ ok: true })
     }
   }

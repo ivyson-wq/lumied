@@ -1409,19 +1409,25 @@ router.on("compliance_quiz_responder", authProfessora, async (ctx) => {
 
   let corretas = 0;
   const resultados: any[] = [];
+  const respostasInsert: any[] = [];
+  const escolaIdResp = ctx.escola_id || atrib.escola_id;
 
   for (const resp of respostas) {
     const gab = gabarito.get(resp.pergunta_id);
     const correta = gab ? resp.resposta_selecionada === gab.resposta_correta : false;
     if (correta) corretas++;
 
-    await ctx.sb.from("compliance_quiz_respostas").insert({
-      escola_id: ctx.escola_id || atrib.escola_id, atribuicao_id, pergunta_id: resp.pergunta_id, tentativa,
+    respostasInsert.push({
+      escola_id: escolaIdResp, atribuicao_id, pergunta_id: resp.pergunta_id, tentativa,
       resposta_selecionada: resp.resposta_selecionada,
       correta, tempo_segundos: resp.tempo_segundos || 0,
     });
 
     resultados.push({ pergunta_id: resp.pergunta_id, correta, explicacao: gab?.explicacao });
+  }
+  // Batch insert pra evitar N+1 (10-20 respostas por quiz)
+  if (respostasInsert.length) {
+    await ctx.sb.from("compliance_quiz_respostas").insert(respostasInsert);
   }
 
   const totalPerguntas = perguntas?.length || 1;

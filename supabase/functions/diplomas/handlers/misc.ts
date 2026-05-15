@@ -14,6 +14,7 @@ import {
   generatePdf, pdfResponse, generateXlsx, xlsxResponse,
   b64urlDecode,
 } from '../../_shared/mod.ts'
+import { refreshSignedUrls } from '../../_shared/signed-url-cache.ts'
 import {
   type Any, type HandlerCtx,
   json as _libJson, criarNotif, verificarHorarioAcesso,
@@ -164,10 +165,17 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
     if (!(prof as any).escola_id) {
       await sb.from('professoras').update({ escola_id: escolaId }).eq('id', prof.id).is('escola_id', null)
     }
-    // Notifica gerentes
+    // Notifica gerentes (bulk insert pra evitar N+1)
     const { data: gerentes } = await sb.from('gerentes').select('email').eq('escola_id', escolaId)
-    for (const g of gerentes ?? []) {
-      await criarNotif(sb, 'gerente', g.email, 'Nova impressao', `${prof.nome} solicitou ${nCopias} copias × ${numPaginas} pag = ${totalFolhas} folhas (${tipo_papel}).`, 'info', escolaId)
+    if (gerentes?.length) {
+      const titulo = 'Nova impressao'
+      const mensagem = `${prof.nome} solicitou ${nCopias} copias × ${numPaginas} pag = ${totalFolhas} folhas (${tipo_papel}).`
+      await sb.from('notificacoes').insert(
+        (gerentes as any[]).map(g => ({
+          portal: 'gerente', destinatario: g.email,
+          titulo, mensagem, tipo: 'info', escola_id: escolaId,
+        }))
+      )
     }
     return json({ ok: true, usado: totalUsado + totalFolhas, limite, num_paginas: numPaginas, modo_lancamento: modoLancamento, duplicado: !!dup, aviso: duplicadoAviso })
   }
@@ -178,14 +186,9 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
     if (!prof) return json({ error: 'Sessao invalida.' }, 401)
     const { data } = await sb.from('impressoes').select('*')
       .eq('professora_id', prof.id).order('criado_em', { ascending: false }).limit(30)
-    // Bucket privado (mig 281): regenera signed URL TTL 1h em cada listagem
-    const refreshed = await Promise.all((data ?? []).map(async (r: any) => {
-      if (r.arquivo_path) {
-        const { data: signed } = await sb.storage.from('impressoes').createSignedUrl(r.arquivo_path, 3600)
-        if (signed?.signedUrl) r.arquivo_url = signed.signedUrl
-      }
-      return r
-    }))
+    // Bucket privado (mig 281): signed URL TTL 1h com cache in-memory
+    // (helper refreshSignedUrls cuts N chamadas Storage por listagem).
+    const refreshed = await refreshSignedUrls(sb.storage, 'impressoes', data ?? [], 'arquivo_path', 'arquivo_url', 3600)
     // Buscar uso mensal
     const mes = new Date().toISOString().slice(0, 7)
     const { data: profData } = await sb.from('professoras').select('serie_id').eq('id', prof.id).maybeSingle()

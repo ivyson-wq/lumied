@@ -72,10 +72,18 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
         escola_id: (prof as any).escola_id,
       })
       if (error) return json({ error: error.message }, 400)
-      // Notifica APENAS gerentes da mesma escola
+      // Notifica APENAS gerentes da mesma escola (bulk insert pra evitar N+1)
       const { data: gerentes } = await sb.from('gerentes').select('email').eq('escola_id', (prof as any).escola_id)
-      for (const g of gerentes ?? []) {
-        await criarNotif(sb, 'gerente', g.email, 'Novo diploma', `${prof.nome} enviou o diploma "${nome_curso}" (${carga_horaria}h) para validação.`, 'info', (prof as any).escola_id)
+      if (gerentes?.length) {
+        const titulo = 'Novo diploma'
+        const mensagem = `${prof.nome} enviou o diploma "${nome_curso}" (${carga_horaria}h) para validação.`
+        await sb.from('notificacoes').insert(
+          (gerentes as any[]).map(g => ({
+            portal: 'gerente', destinatario: g.email,
+            titulo, mensagem, tipo: 'info',
+            escola_id: (prof as any).escola_id,
+          }))
+        )
       }
       return json({ ok: true })
     }
@@ -115,10 +123,18 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
         escola_id: (prof as any).escola_id,
       })
       if (error) return json({ error: error.message }, 400)
-      // Notifica APENAS secretárias da mesma escola
+      // Notifica APENAS secretárias da mesma escola (bulk insert pra evitar N+1)
       const { data: secs } = await sb.from('secretarias').select('email').eq('escola_id', (prof as any).escola_id)
-      for (const s of secs ?? []) {
-        await criarNotif(sb, 'secretaria', s.email, 'Novo atestado', `${prof.nome} enviou um atestado (${data_inicio} a ${data_fim}) para validação.`, 'info', (prof as any).escola_id)
+      if (secs?.length) {
+        const titulo = 'Novo atestado'
+        const mensagem = `${prof.nome} enviou um atestado (${data_inicio} a ${data_fim}) para validação.`
+        await sb.from('notificacoes').insert(
+          (secs as any[]).map(s => ({
+            portal: 'secretaria', destinatario: s.email,
+            titulo, mensagem, tipo: 'info',
+            escola_id: (prof as any).escola_id,
+          }))
+        )
       }
       return json({ ok: true })
     }
@@ -181,13 +197,15 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
         pdiId = novo.id
       }
 
-      // Upsert competências
-      for (const c of competencias) {
-        await sb.from('pdi_competencias').upsert(
-          { pdi_id: pdiId, area: c.area, nota_auto: c.nota_auto, comentario: c.comentario ?? null, escola_id: (prof as any).escola_id },
-          { onConflict: 'pdi_id,area' }
-        )
-      }
+      // Upsert competências em batch (7 areas em uma única chamada)
+      await sb.from('pdi_competencias').upsert(
+        competencias.map(c => ({
+          pdi_id: pdiId, area: c.area, nota_auto: c.nota_auto,
+          comentario: c.comentario ?? null,
+          escola_id: (prof as any).escola_id,
+        })),
+        { onConflict: 'pdi_id,area' }
+      )
       return json({ ok: true, pdi_id: pdiId })
     }
 

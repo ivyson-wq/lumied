@@ -45,9 +45,10 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
     if (!prof) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
 
     if (action === 'alm_catalogo') {
-      let q = sb.from('alm_insumos').select('*').eq('ativo', true)
-      if ((prof as any).escola_id) q = q.eq('escola_id', (prof as any).escola_id)
-      const { data } = await q.order('categoria').order('nome')
+      if (!(prof as any).escola_id) return json({ error: 'Professora sem escola associada.' }, 403)
+      const { data } = await sb.from('alm_insumos').select('*')
+        .eq('ativo', true).eq('escola_id', (prof as any).escola_id)
+        .order('categoria').order('nome')
       return json({ data: data ?? [] })
     }
 
