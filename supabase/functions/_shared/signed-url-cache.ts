@@ -48,10 +48,12 @@ export async function refreshSignedUrls<T extends Record<string, any>>(
 ): Promise<T[]> {
   return Promise.all(
     rows.map(async (r) => {
-      const path = r[pathField];
+      // Cast genérico p/ Record indexável — TS 5 não permite write via index em T extends Record
+      const rec = r as Record<string, unknown>;
+      const path = rec[pathField] as string | undefined;
       if (path) {
         const url = await getCachedSignedUrl(storage, bucket, path, ttlSec);
-        if (url) r[urlField] = url;
+        if (url) rec[urlField] = url;
       }
       return r;
     }),
