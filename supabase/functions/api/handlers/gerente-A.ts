@@ -1846,6 +1846,69 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     });
   }
 
+  // ═══════════════════════════════════════════════════════════
+  //  LAP — Activation Checklist (Sprint 4 do programa)
+  //  Widget persistente que mostra próximos passos de ativação.
+  // ═══════════════════════════════════════════════════════════
+  if (action === "lap_checklist_get") {
+    const { getChecklistState } = await import("../../_shared/lap_checklist.ts");
+    const state = await getChecklistState(admin, sessionEscolaId, gerente.id);
+    return ok(state);
+  }
+
+  if (action === "lap_checklist_dismiss") {
+    const { item_key, until_days } = body as { item_key?: string; until_days?: number };
+    if (!item_key || typeof item_key !== "string") return err("item_key obrigatório.");
+    const days = Math.min(Math.max(Number(until_days) || 1, 1), 30);
+    const until = new Date(Date.now() + days * 86400000).toISOString();
+    const { error } = await admin.from("lap_activation_dismiss").upsert({
+      escola_id: sessionEscolaId,
+      user_id: gerente.id,
+      item_key,
+      dismissed_until: until,
+      marked_done: false,
+    }, { onConflict: "escola_id,user_id,item_key" });
+    if (error) return err(sanitizePgError(error));
+    // LAP: também emite evento pra rastrear engajamento com checklist
+    try {
+      const { trackEvent } = await import("../../_shared/track.ts");
+      trackEvent(admin, {
+        escola_id: sessionEscolaId,
+        user_id: gerente.id,
+        event_name: "onboarding.checklist.item_dispensado",
+        module: "onboarding",
+        persona: "diretor",
+        payload: { item_key, until_days: days },
+      });
+    } catch (_) { /* silent */ }
+    return ok({ success: true, dismissed_until: until });
+  }
+
+  if (action === "lap_checklist_mark_done") {
+    const { item_key } = body as { item_key?: string };
+    if (!item_key || typeof item_key !== "string") return err("item_key obrigatório.");
+    const { error } = await admin.from("lap_activation_dismiss").upsert({
+      escola_id: sessionEscolaId,
+      user_id: gerente.id,
+      item_key,
+      marked_done: true,
+      marked_done_at: new Date().toISOString(),
+      dismissed_until: null,
+    }, { onConflict: "escola_id,user_id,item_key" });
+    if (error) return err(sanitizePgError(error));
+    try {
+      const { trackEvent } = await import("../../_shared/track.ts");
+      trackEvent(admin, {
+        escola_id: sessionEscolaId,
+        user_id: gerente.id,
+        event_name: "onboarding.checklist.item_marcado_feito",
+        module: "onboarding",
+        persona: "diretor",
+        payload: { item_key },
+      });
+    } catch (_) { /* silent */ }
+    return ok({ success: true });
+  }
 
   return null
 }
