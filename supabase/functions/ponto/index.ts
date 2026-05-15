@@ -335,139 +335,14 @@ router.on("ponto_afd_upload", authGerente, feat, async (ctx) => {
   const { conteudo_afd, nome_arquivo } = ctx.body as any;
   if (!conteudo_afd) throw new AppError("VALIDATION_FAILED", "conteudo_afd obrigatório (texto do arquivo AFD).");
 
-  const parsed = parseAfd(conteudo_afd);
-
-  // 1a. Header obrigatório — periodo_inicio/periodo_fim em afd_imports são NOT NULL.
-  //     Sem header válido, derivamos o período dos eventos (se houver) ou abortamos.
-  let periodoInicio = parsed.header?.periodStart ?? null;
-  let periodoFim    = parsed.header?.periodEnd ?? null;
-  if ((!periodoInicio || !periodoFim) && parsed.events.length > 0) {
-    const dates = parsed.events.map(e => e.date).sort();
-    periodoInicio = periodoInicio || dates[0];
-    periodoFim    = periodoFim    || dates[dates.length - 1];
-  }
-  if (!periodoInicio || !periodoFim) {
-    throw new AppError("VALIDATION_FAILED",
-      "AFD inválido: cabeçalho (tipo 1) ausente e arquivo sem batidas para inferir o período. " +
-      (parsed.errors.length > 0 ? "Detalhes: " + parsed.errors.join("; ") : ""));
-  }
-
-  // 1b. Criar registro de importação
-  const { data: importRec, error: impErr } = await ctx.sb.from("afd_imports").insert({
-    escola_id: ctx.escola_id,
-    importado_por: ctx.user?.nome ?? "sistema",
-    nome_arquivo: nome_arquivo || "afd_upload.txt",
-    periodo_inicio: periodoInicio,
-    periodo_fim: periodoFim,
-    cnpj_empregador: parsed.header?.cnpj ?? null,
-    razao_social: parsed.header?.companyName ?? null,
-    total_eventos: parsed.events.length,
-    total_funcionarios: parsed.employees.length,
-    status: parsed.isValid ? "processando" : "erro",
-    erro_detalhes: parsed.errors.length > 0 ? parsed.errors.join("; ") : null,
-  }).select().single();
-  if (impErr) throw new AppError("BAD_REQUEST", impErr.message);
-
-  if (!parsed.isValid) {
-    return successResponse({ import_id: importRec.id, status: "erro", errors: parsed.errors });
-  }
-
-  // 2a. Upsert afd_funcionarios com tipo 5 do AFD (catálogo de funcionários do REP).
-  //     Usa pis_afd como ID externo do dispositivo. nome_afd vem do tipo 5.
-  if (parsed.employees.length > 0) {
-    const eventDatesByPis = new Map<string, { first: string; last: string; count: number }>();
-    for (const ev of parsed.events) {
-      const cur = eventDatesByPis.get(ev.pis);
-      if (!cur) eventDatesByPis.set(ev.pis, { first: ev.date, last: ev.date, count: 1 });
-      else {
-        if (ev.date < cur.first) cur.first = ev.date;
-        if (ev.date > cur.last) cur.last = ev.date;
-        cur.count++;
-      }
-    }
-    const funcRows = parsed.employees.map(f => {
-      const stats = eventDatesByPis.get(f.pis);
-      return {
-        escola_id: ctx.escola_id, pis_afd: f.pis, nome_afd: f.name || null, cargo_afd: f.role || null,
-        primeiro_visto: stats?.first ?? null, ultimo_visto: stats?.last ?? null, total_eventos: stats?.count ?? 0,
-      };
-    });
-    const fcs = 200;
-    for (let i = 0; i < funcRows.length; i += fcs) {
-      await ctx.sb.from("afd_funcionarios").upsert(funcRows.slice(i, i + fcs), { onConflict: "escola_id,pis_afd", ignoreDuplicates: false });
-    }
-  }
-
-  // 2b. Buscar de-para via afd_funcionarios.employee_id (source of truth).
-  //     PIS oficial em ponto_employees.pis NÃO bate com pis_afd (ID interno do REP).
-  const { data: mapped } = await ctx.sb.from("afd_funcionarios")
-    .select("pis_afd, employee_id").eq("escola_id", ctx.escola_id).not("employee_id", "is", null);
-  const pisMap = new Map<string, string>((mapped ?? []).map((m: any) => [m.pis_afd, m.employee_id]));
-
-  // 3. Inserir eventos em chunks
-  let unmatchedPis = 0;
-  const eventRows = parsed.events.map(ev => {
-    const empId = pisMap.get(ev.pis) ?? null;
-    if (!empId) unmatchedPis++;
-    return { escola_id: ctx.escola_id, import_id: importRec.id, employee_id: empId, pis: ev.pis, data_evento: ev.date, hora_evento: ev.time, nsr: ev.nsr };
-  });
-
-  const chunkSize = 500;
-  for (let i = 0; i < eventRows.length; i += chunkSize) {
-    await ctx.sb.from("afd_events").insert(eventRows.slice(i, i + chunkSize));
-  }
-
-  // 4. Calcular daily_summaries
-  const grouped = new Map<string, AfdEvent[]>();
-  for (const ev of parsed.events) {
-    const key = `${ev.pis}_${ev.date}`;
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key)!.push(ev);
-  }
-
-  const summaryRows: any[] = [];
-  for (const [key, dayEvents] of grouped) {
-    const [pis] = key.split("_");
-    const empId = pisMap.get(pis);
-    if (!empId) continue;
-    const summary = calculateDay(dayEvents);
-    const expectedMinutes = 480; // 8h default
-    const worked = summary.workedMinutes ?? 0;
-    summaryRows.push({
-      escola_id: ctx.escola_id,
-      employee_id: empId,
-      data_resumo: summary.date,
-      total_marcacoes: dayEvents.length,
-      primeira_marcacao: summary.firstEvent,
-      ultima_marcacao: summary.lastEvent,
-      minutos_trabalhados: summary.workedMinutes,
-      minutos_esperados: expectedMinutes,
-      saldo_minutos: worked - expectedMinutes,
-      status: dayEvents.length === 0 ? "ausente" : summary.hasOddEvents ? "impar" : "presente",
-      marcacao_impar: summary.hasOddEvents,
-      import_id: importRec.id,
-    });
-  }
-
-  if (summaryRows.length > 0) {
-    for (let i = 0; i < summaryRows.length; i += chunkSize) {
-      await ctx.sb.from("ponto_daily_summary").upsert(summaryRows.slice(i, i + chunkSize), { onConflict: "employee_id,data_resumo" });
-    }
-  }
-
-  // 5. Atualizar importação
-  await ctx.sb.from("afd_imports").update({
-    status: "concluido",
-    pis_nao_encontrados: unmatchedPis,
-  }).eq("id", importRec.id).eq("escola_id", ctx.escola_id);
-
+  const result = await processAfdContent(ctx, conteudo_afd, nome_arquivo || "afd_upload.txt", "manual", null);
   return successResponse({
-    import_id: importRec.id,
-    total_eventos: parsed.events.length,
-    total_funcionarios_afd: parsed.employees.length,
-    pis_nao_encontrados: unmatchedPis,
-    resumos_gerados: summaryRows.length,
-    status: "concluido",
+    import_id: result.import_id,
+    total_eventos: result.total_eventos,
+    pis_nao_encontrados: result.pis_nao_encontrados,
+    resumos_gerados: result.resumos_gerados,
+    status: result.status,
+    errors: result.errors,
   });
 });
 
@@ -808,7 +683,11 @@ interface RepConfig {
   url_afd_template: string;
 }
 
-/** Processa o conteúdo AFD vindo do daemon — gera afd_imports + afd_events + ponto_daily_summary. */
+/** Processa o conteúdo AFD vindo do daemon Bridge OU do upload manual.
+ *  Gera afd_imports + afd_funcionarios (de-para com tipo 5) + afd_events
+ *  + ponto_daily_summary (só pros eventos vinculados via afd_funcionarios.employee_id).
+ *  Source of truth do de-para: afd_funcionarios.employee_id (não ponto_employees.pis,
+ *  porque o "PIS" no AFD costuma ser o ID interno do REP, não o PIS oficial). */
 async function processAfdContent(
   ctx: any,
   conteudo: string,
@@ -817,14 +696,29 @@ async function processAfdContent(
   repDeviceId?: string | null,
 ): Promise<{ import_id: string; total_eventos: number; resumos_gerados: number; pis_nao_encontrados: number; status: string; errors?: string[] }> {
   const parsed = parseAfd(conteudo);
+
+  // Fallback de período: se header faltar, infere min/max das batidas.
+  let periodoInicio = parsed.header?.periodStart ?? null;
+  let periodoFim    = parsed.header?.periodEnd ?? null;
+  if ((!periodoInicio || !periodoFim) && parsed.events.length > 0) {
+    const dates = parsed.events.map(e => e.date).sort();
+    periodoInicio = periodoInicio || dates[0];
+    periodoFim    = periodoFim    || dates[dates.length - 1];
+  }
+  if (!periodoInicio || !periodoFim) {
+    throw new AppError("VALIDATION_FAILED",
+      "AFD inválido: cabeçalho (tipo 1) ausente e arquivo sem batidas para inferir o período. " +
+      (parsed.errors.length > 0 ? "Detalhes: " + parsed.errors.join("; ") : ""));
+  }
+
   const { data: importRec, error: impErr } = await ctx.sb.from("afd_imports").insert({
     escola_id: ctx.escola_id,
     importado_por: origem === "bridge_auto" ? "lumied_bridge" : (ctx.user?.nome ?? "sistema"),
     nome_arquivo: nomeArquivo,
-    periodo_inicio: parsed.header?.periodStart,
-    periodo_fim: parsed.header?.periodEnd,
-    cnpj_empregador: parsed.header?.cnpj,
-    razao_social: parsed.header?.companyName,
+    periodo_inicio: periodoInicio,
+    periodo_fim: periodoFim,
+    cnpj_empregador: parsed.header?.cnpj ?? null,
+    razao_social: parsed.header?.companyName ?? null,
     total_eventos: parsed.events.length,
     total_funcionarios: parsed.employees.length,
     status: parsed.isValid ? "processando" : "erro",
@@ -837,8 +731,48 @@ async function processAfdContent(
     return { import_id: importRec.id, total_eventos: 0, resumos_gerados: 0, pis_nao_encontrados: 0, status: "erro", errors: parsed.errors };
   }
 
-  const { data: emps } = await ctx.sb.from("ponto_employees").select("id, pis").eq("escola_id", ctx.escola_id).eq("ativo", true);
-  const pisMap = new Map((emps ?? []).map((e: any) => [e.pis, e.id]));
+  const chunkSize = 500;
+
+  // Upsert afd_funcionarios com tipo 5 do AFD (catálogo do REP).
+  // Quando o AFD não traz tipo 5 (alguns REPs Bridge entregam só batidas),
+  // a tabela ainda é alimentada pelos PIS distintos das batidas no fallback.
+  const eventStatsByPis = new Map<string, { first: string; last: string; count: number }>();
+  for (const ev of parsed.events) {
+    const cur = eventStatsByPis.get(ev.pis);
+    if (!cur) eventStatsByPis.set(ev.pis, { first: ev.date, last: ev.date, count: 1 });
+    else {
+      if (ev.date < cur.first) cur.first = ev.date;
+      if (ev.date > cur.last) cur.last = ev.date;
+      cur.count++;
+    }
+  }
+
+  const funcRows: any[] = [];
+  const seenPis = new Set<string>();
+  for (const f of parsed.employees) {
+    seenPis.add(f.pis);
+    const stats = eventStatsByPis.get(f.pis);
+    funcRows.push({
+      escola_id: ctx.escola_id, pis_afd: f.pis, nome_afd: f.name || null, cargo_afd: f.role || null,
+      primeiro_visto: stats?.first ?? null, ultimo_visto: stats?.last ?? null, total_eventos: stats?.count ?? 0,
+    });
+  }
+  // Garante registros para PIS que aparecem em batidas mas não vieram no tipo 5
+  for (const [pis, stats] of eventStatsByPis) {
+    if (seenPis.has(pis)) continue;
+    funcRows.push({
+      escola_id: ctx.escola_id, pis_afd: pis, nome_afd: null, cargo_afd: null,
+      primeiro_visto: stats.first, ultimo_visto: stats.last, total_eventos: stats.count,
+    });
+  }
+  for (let i = 0; i < funcRows.length; i += chunkSize) {
+    await ctx.sb.from("afd_funcionarios").upsert(funcRows.slice(i, i + chunkSize), { onConflict: "escola_id,pis_afd" });
+  }
+
+  // De-para via afd_funcionarios.employee_id (source of truth)
+  const { data: mapped } = await ctx.sb.from("afd_funcionarios")
+    .select("pis_afd, employee_id").eq("escola_id", ctx.escola_id).not("employee_id", "is", null);
+  const pisMap = new Map<string, string>((mapped ?? []).map((m: any) => [m.pis_afd, m.employee_id]));
 
   let unmatchedPis = 0;
   const eventRows = parsed.events.map(ev => {
@@ -847,7 +781,6 @@ async function processAfdContent(
     return { escola_id: ctx.escola_id, import_id: importRec.id, employee_id: empId, pis: ev.pis, data_evento: ev.date, hora_evento: ev.time, nsr: ev.nsr };
   });
 
-  const chunkSize = 500;
   for (let i = 0; i < eventRows.length; i += chunkSize) {
     await ctx.sb.from("afd_events").insert(eventRows.slice(i, i + chunkSize));
   }
