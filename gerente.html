@@ -13,6 +13,22 @@
 <link rel="stylesheet" href="/setup-wizard.css">
 <script src="/lumied-help.js" defer></script>
 <link rel="stylesheet" href="/lumied-help.css">
+<script src="/lumied-tour.js" defer></script>
+<link rel="stylesheet" href="/lumied-tour.css">
+<script src="/lumied-tours-data.js" defer></script>
+<script>
+  // Auto-start tour de landing após wizard fechar ou 4s
+  window.addEventListener('load', function() {
+    function tryStart() {
+      if (document.querySelector('.lap-wizard-overlay')) {
+        setTimeout(tryStart, 1500);
+        return;
+      }
+      if (window.LumiedTour) window.LumiedTour.autoStart('tour_gerente_landing');
+    }
+    setTimeout(tryStart, 4000);
+  });
+</script>
 <script src="/referral-widget.js" defer></script>
 <title>Lumied — Painel do Gerente</title>
 <meta name="theme-color" content="#1c1712">

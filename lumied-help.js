@@ -168,6 +168,10 @@
     loadArticles().then(function(arr) {
       allArticles = arr;
       renderList('');
+      // Auto-start tour de help drawer na 1ª abertura
+      if (window.LumiedTour) {
+        setTimeout(function() { window.LumiedTour.autoStart('tour_help_drawer'); }, 600);
+      }
     });
   }
 

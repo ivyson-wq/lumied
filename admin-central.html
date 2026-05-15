@@ -5,6 +5,9 @@
 <script src="/sentry-init.js"></script>
 <script src="/analytics.js" defer></script>
 <script src="/product-events.js" defer></script>
+<script src="/lumied-tour.js" defer></script>
+<link rel="stylesheet" href="/lumied-tour.css">
+<script src="/lumied-tours-data.js" defer></script>
 <script src="/referral-widget.js" defer></script>
 <script src="/config.js"></script>
 <script src="/dist/admin-central/index.js" defer></script>
@@ -1627,7 +1630,7 @@ function showPanel(id, el) {
   if (id === 'migracao') loadMigracao();
   if (id === 'billing') loadBillingCentral();
   if (id === 'finlumied') loadFinlumied();
-  if (id === 'activation') loadActivation();
+  if (id === 'activation') { loadActivation(); setTimeout(function() { if (window.LumiedTour) window.LumiedTour.autoStart('tour_activation_painel'); }, 800); }
   if (id === 'saude') loadSaudeCS();
   if (id === 'playbooks') loadPlaybooks();
   if (id === 'crm') loadCRM();

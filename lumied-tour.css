@@ -1,0 +1,134 @@
+/* ═══════════════════════════════════════════════════════════════
+   Lumied — First-time walkthrough engine (Sprint 9 LAP)
+   ═══════════════════════════════════════════════════════════════ */
+
+.lap-tour-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 2147483640;
+  pointer-events: auto;
+  /* clip-path setado via JS pra "cortar" o elemento highlighted */
+  transition: clip-path .25s ease-out;
+}
+
+.lap-tour-highlight {
+  position: fixed;
+  border-radius: 10px;
+  box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.7), 0 0 0 9999px rgba(15, 23, 42, 0.55);
+  z-index: 2147483641;
+  pointer-events: none;
+  transition: top .25s, left .25s, width .25s, height .25s;
+  animation: lapTourPulse 2s ease-in-out infinite;
+}
+@keyframes lapTourPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.7), 0 0 0 9999px rgba(15, 23, 42, 0.55); }
+  50% { box-shadow: 0 0 0 4px rgba(108, 99, 255, 1), 0 0 0 9999px rgba(15, 23, 42, 0.55); }
+}
+
+.lap-tour-popover {
+  position: fixed;
+  z-index: 2147483650;
+  width: min(320px, calc(100vw - 32px));
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  padding: 18px 18px 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #1a1a1a;
+  animation: lapTourPop .2s ease-out;
+}
+@keyframes lapTourPop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Arrow pointing to the highlighted element */
+.lap-tour-arrow {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  transform: rotate(45deg);
+}
+.lap-tour-popover[data-pos="top"]    .lap-tour-arrow { bottom: -7px; left: 50%; margin-left: -7px; box-shadow: 3px 3px 4px rgba(0,0,0,0.08); }
+.lap-tour-popover[data-pos="bottom"] .lap-tour-arrow { top: -7px; left: 50%; margin-left: -7px; }
+.lap-tour-popover[data-pos="left"]   .lap-tour-arrow { right: -7px; top: 50%; margin-top: -7px; box-shadow: 3px -3px 4px rgba(0,0,0,0.08); }
+.lap-tour-popover[data-pos="right"]  .lap-tour-arrow { left: -7px; top: 50%; margin-top: -7px; }
+
+.lap-tour-step-num {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6C63FF;
+  background: #f3f0ff;
+  padding: 3px 9px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+
+.lap-tour-title {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.3;
+  margin: 0 0 5px;
+  color: #1a1a1a;
+}
+
+.lap-tour-text {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.lap-tour-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lap-tour-btn {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  border: none;
+  transition: transform .12s, box-shadow .12s;
+}
+.lap-tour-btn.primary {
+  background: linear-gradient(135deg, #6C63FF, #3B82F6);
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(108, 99, 255, 0.2);
+}
+.lap-tour-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 5px 12px rgba(108, 99, 255, 0.32); }
+.lap-tour-btn.ghost {
+  background: transparent;
+  color: #94a3b8;
+  padding: 7px 8px;
+  font-weight: 600;
+}
+.lap-tour-btn.ghost:hover { color: #1a1a1a; }
+.lap-tour-btn.back {
+  background: #fff;
+  color: #64748b;
+  border: 1px solid #e5e7eb;
+}
+.lap-tour-btn.back:hover { background: #fafafa; }
+
+.lap-tour-dots {
+  display: flex;
+  gap: 4px;
+}
+.lap-tour-dot {
+  width: 16px;
+  height: 3px;
+  border-radius: 1.5px;
+  background: #e5e7eb;
+}
+.lap-tour-dot.active { background: #6C63FF; }
+.lap-tour-dot.done { background: rgba(108, 99, 255, 0.5); }
