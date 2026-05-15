@@ -960,6 +960,68 @@ router.on("ponto_rep_devices_pull_now", authGerente, feat, async (ctx) => {
   return successResponse(result);
 });
 
+/** Puxa lista de funcionários cadastrados no iDFace via Bridge e popula
+ *  afd_funcionarios.nome_afd (de-para com pis_afd = registration do REP).
+ *  body opcional: { rep_id } — se omitido, usa o primeiro REP ativo da escola. */
+router.on("ponto_idface_users_pull", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { rep_id } = (ctx.body ?? {}) as any;
+
+  let repQ = ctx.sb.from("ponto_rep_devices").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true);
+  if (rep_id) repQ = repQ.eq("id", rep_id);
+  const { data: reps } = await repQ.limit(1);
+  const rep = reps?.[0];
+  if (!rep) throw new AppError("NOT_FOUND", "Nenhum REP cadastrado/ativo na escola para puxar a lista de funcionários.");
+
+  const dispatchResult = await bridgeDispatchEphemeral(ctx.escola_id, "idface_users_pull", {
+    ip: rep.ip,
+    porta: rep.porta,
+    protocolo: rep.protocolo,
+    auth_modo: rep.auth_modo,
+    usuario: rep.usuario,
+    senha: rep.senha,
+    url_login: rep.url_login,
+  }, 30000);
+
+  if (!dispatchResult.ok) {
+    return successResponse({ ok: false, error: dispatchResult.error || "Falha ao falar com o Bridge.", status: dispatchResult.status });
+  }
+  const body = dispatchResult.body || {};
+  if (!body.ok && body.error) {
+    return successResponse({ ok: false, error: body.error });
+  }
+  const users: Array<{ id: string; name: string; registration: string }> = body.users || body.payload?.users || [];
+  if (!Array.isArray(users) || users.length === 0) {
+    return successResponse({ ok: true, total: 0, atualizados: 0, criados: 0, message: "iDFace não retornou usuários." });
+  }
+
+  // Normaliza pis_afd igual ao parser (12 dígitos, padStart) e faz upsert por (escola_id, pis_afd).
+  // ON CONFLICT atualiza nome_afd. Pra registros já vinculados a employee_id, mantém o vínculo.
+  const norm = (s: string) => String(s || "").replace(/\D/g, "").padStart(12, "0").slice(-12);
+  const rows = users
+    .filter(u => u.registration && norm(u.registration).replace(/0/g, "").length > 0)
+    .map(u => ({
+      escola_id: ctx.escola_id,
+      pis_afd: norm(u.registration),
+      nome_afd: u.name || null,
+    }));
+
+  // Conta quantos já existiam vs serão criados (best-effort)
+  const allPis = rows.map(r => r.pis_afd);
+  const { data: existentes } = await ctx.sb.from("afd_funcionarios").select("pis_afd")
+    .eq("escola_id", ctx.escola_id).in("pis_afd", allPis);
+  const existSet = new Set((existentes ?? []).map((e: any) => e.pis_afd));
+  const criados = rows.filter(r => !existSet.has(r.pis_afd)).length;
+  const atualizados = rows.length - criados;
+
+  const chunkSize = 200;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    await ctx.sb.from("afd_funcionarios").upsert(rows.slice(i, i + chunkSize), { onConflict: "escola_id,pis_afd" });
+  }
+
+  return successResponse({ ok: true, total: rows.length, atualizados, criados, ignorados: users.length - rows.length });
+});
+
 // ── Setup Checklist — usado pela página "Setup do Relógio" ──
 router.on("ponto_setup_checklist", authGerente, feat, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");

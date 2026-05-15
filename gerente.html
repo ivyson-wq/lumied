@@ -4163,7 +4163,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
           <div class="sec-title" style="margin:0;font-size:15px;">Funcionários vistos no AFD <span id="pontoAfdFuncsCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
-          <button onclick="loadPontoAfdFuncs()" style="padding:6px 12px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Atualizar</button>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button onclick="pontoAfdPullNomes()" id="pontoAfdPullNomesBtn" title="Conecta no relógio iDFace via Lumied Bridge e baixa a lista de funcionários cadastrados (com nome). Popula a coluna 'Nome no AFD' acima." style="padding:6px 12px;background:#eef4ff;color:#1a4480;border:1px solid #c8dffa;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;">⬇️ Puxar nomes do relógio</button>
+            <button onclick="loadPontoAfdFuncs()" style="padding:6px 12px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Atualizar</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>

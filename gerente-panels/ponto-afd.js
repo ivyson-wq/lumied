@@ -400,6 +400,33 @@
     loadPontoAfdFuncs();
   }
 
+  async function pontoAfdPullNomes() {
+    const btn = document.getElementById('pontoAfdPullNomesBtn');
+    const original = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Conectando no relógio...'; }
+    try {
+      const d = await pontoApi({ action: 'ponto_idface_users_pull' });
+      if (d.error) {
+        if (typeof showToast === 'function') showToast(d.error, 'error'); else alert(d.error);
+        return;
+      }
+      const r = d.data || d;
+      if (r.ok === false) {
+        const msg = r.error || 'Falha ao puxar do relógio.';
+        if (typeof showToast === 'function') showToast(msg, 'error'); else alert(msg);
+        return;
+      }
+      const msg = `✓ ${r.total || 0} funcionário(s) lido(s) do relógio — ${r.atualizados || 0} atualizado(s), ${r.criados || 0} criado(s).`;
+      if (typeof showToast === 'function') showToast(msg, 'success'); else alert(msg);
+      loadPontoAfdFuncs();
+    } catch (e) {
+      const m = 'Erro: ' + (e?.message || e);
+      if (typeof showToast === 'function') showToast(m, 'error'); else alert(m);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = original; }
+    }
+  }
+
   async function pontoAfdFuncCreate(afd_id) {
     if (!confirm('Criar um novo funcionário no Lumied a partir deste registro do AFD?\n\nO PIS será preenchido com o ID que vem do relógio (você pode editar depois com o PIS oficial). Carga horária diária padrão: 8h.')) return;
     const d = await pontoApi({ action: 'ponto_afd_func_create_employee', afd_id, daily_hours: 8 });
