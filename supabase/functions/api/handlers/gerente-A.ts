@@ -1984,6 +1984,54 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   }
 
   // ═══════════════════════════════════════════════════════════
+  //  LAP — NPS in-app (Sprint 18)
+  // ═══════════════════════════════════════════════════════════
+  if (action === "lap_nps_state") {
+    // Retorna se este usuário já respondeu nos últimos 90d
+    const { count } = await admin.from("lap_nps_responses")
+      .select("*", { count: "exact", head: true })
+      .eq("escola_id", sessionEscolaId)
+      .eq("user_id", gerente.id)
+      .gte("criado_em", new Date(Date.now() - 90 * 86400000).toISOString());
+    // Só pede NPS depois de D14
+    const { data: escola } = await admin.from("escolas").select("criado_em").eq("id", sessionEscolaId).maybeSingle();
+    const dias = escola?.criado_em
+      ? Math.floor((Date.now() - new Date(escola.criado_em).getTime()) / 86400000)
+      : 0;
+    const elegivel = dias >= 14 && (count ?? 0) === 0;
+    return ok({ elegivel, ja_respondeu_90d: (count ?? 0) > 0, dias_desde_d0: dias });
+  }
+
+  if (action === "lap_nps_responder") {
+    const { score, comentario, contexto } = body as { score?: number; comentario?: string; contexto?: string };
+    if (typeof score !== "number" || score < 0 || score > 10) return err("Score deve ser 0-10.");
+    const categoria = score >= 9 ? "promoter" : score >= 7 ? "passive" : "detractor";
+    const { error: nErr } = await admin.from("lap_nps_responses").insert({
+      escola_id: sessionEscolaId,
+      user_id: gerente.id,
+      user_papel: "gerente",
+      user_email: gerente.email,
+      score,
+      comentario: comentario || null,
+      categoria,
+      contexto: contexto || null,
+    });
+    if (nErr) return err(sanitizePgError(nErr));
+    try {
+      const { trackEvent } = await import("../../_shared/track.ts");
+      trackEvent(admin, {
+        escola_id: sessionEscolaId,
+        user_id: gerente.id,
+        event_name: "feedback.nps.respondido",
+        module: "onboarding",
+        persona: "diretor",
+        payload: { score, categoria },
+      });
+    } catch (_) { /* */ }
+    return ok({ success: true, categoria });
+  }
+
+  // ═══════════════════════════════════════════════════════════
   //  LAP — Convites Magic Link (Sprint 10)
   //  Convite passwordless 1-uso, 7d expiração. Envio via WA/Email.
   // ═══════════════════════════════════════════════════════════

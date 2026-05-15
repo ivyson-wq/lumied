@@ -591,6 +591,95 @@ router.on("lap_activation_overview", authAdmin, async (ctx) => {
   });
 });
 
+router.on("lap_expansion_signals", authAdmin, async (ctx) => {
+  // Sprint 19 — Detecta escolas Starter elegíveis a upsell
+  const { data: escolas } = await ctx.sb.from("escolas")
+    .select("id, nome, slug, plano, criado_em")
+    .eq("ativo", true);
+  if (!escolas || escolas.length === 0) return successResponse({ candidatos: [] });
+
+  const ids = (escolas as any[]).map(e => e.id);
+  const { data: caches } = await ctx.sb.from("escola_health_score_cache")
+    .select("*").in("escola_id", ids);
+  const cacheMap = new Map<string, any>();
+  for (const c of (caches ?? []) as any[]) cacheMap.set(c.escola_id, c);
+
+  // Conta alunos por escola pra ver se passou o limite do Starter (300 alunos)
+  const { data: alunosCnt } = await ctx.sb.from("alunos")
+    .select("escola_id", { count: "exact", head: false })
+    .in("escola_id", ids)
+    .eq("ativo", true);
+  const alunosPorEscola = new Map<string, number>();
+  for (const a of (alunosCnt ?? []) as any[]) {
+    alunosPorEscola.set(a.escola_id, (alunosPorEscola.get(a.escola_id) ?? 0) + 1);
+  }
+
+  const STARTER_PLANOS = ["starter","gestao","start","basico"];
+  const candidatos: any[] = [];
+  for (const e of escolas as any[]) {
+    const planoLower = (e.plano || "").toLowerCase();
+    const isStarter = STARTER_PLANOS.includes(planoLower);
+    if (!isStarter) continue;
+
+    const cache = cacheMap.get(e.id) || {};
+    const ampsAtual = cache.amps_atual ?? 0;
+    const score = cache.score ?? 0;
+    const alunos = alunosPorEscola.get(e.id) ?? 0;
+
+    // Sinais de expansão
+    const sinais: string[] = [];
+    if (alunos > 300) sinais.push(`${alunos} alunos (acima do limite Starter 300)`);
+    if (ampsAtual >= 5) sinais.push(`${ampsAtual} módulos ativos (uso intenso)`);
+    if (score >= 75) sinais.push(`Health Score ${score} (saudável e expansível)`);
+    if ((cache.delta_30d ?? 0) >= 10) sinais.push(`Score subindo (+${cache.delta_30d} em 30d)`);
+
+    if (sinais.length === 0) continue;
+
+    candidatos.push({
+      escola_id: e.id,
+      escola_nome: e.nome,
+      escola_slug: e.slug,
+      plano_atual: e.plano,
+      alunos,
+      amps_atual: ampsAtual,
+      score,
+      sinais,
+      sugestao: alunos > 800 ? "premium" : "growth",
+      prioridade: sinais.length >= 3 ? "alta" : sinais.length === 2 ? "media" : "baixa",
+    });
+  }
+
+  candidatos.sort((a, b) => b.sinais.length - a.sinais.length);
+  return successResponse({ candidatos, gerado_em: new Date().toISOString() });
+});
+
+router.on("lap_nps_overview", authAdmin, async (ctx) => {
+  // Sprint 18 — Visão geral NPS por escola e agregado
+  const { escola_id } = ctx.body as { escola_id?: string };
+  if (escola_id) {
+    const { data } = await ctx.sb.rpc("fn_nps_escola", { p_escola_id: escola_id });
+    return successResponse({ escola_id, ...(data || {}) });
+  }
+  // Agregado: todas escolas dos últimos 60d
+  const { data: rows } = await ctx.sb.from("lap_nps_responses")
+    .select("escola_id, score, categoria, comentario, criado_em, escolas(nome)")
+    .gte("criado_em", new Date(Date.now() - 60 * 86400000).toISOString())
+    .order("criado_em", { ascending: false })
+    .limit(500);
+  const list = (rows ?? []) as any[];
+  const total = list.length;
+  const promoters = list.filter(r => r.categoria === "promoter").length;
+  const passives  = list.filter(r => r.categoria === "passive").length;
+  const detractors= list.filter(r => r.categoria === "detractor").length;
+  const npsGlobal = total > 0 ? Math.round(((promoters - detractors) / total) * 100) : null;
+  return successResponse({
+    nps_global: npsGlobal,
+    total,
+    promoters, passives, detractors,
+    respostas: list.slice(0, 50),
+  });
+});
+
 router.on("lap_qbr_generate", authAdmin, validateInput(escolaIdSchema), async (ctx) => {
   // Sprint 16 — QBR template
   const escola_id = ctx.body.escola_id as string;

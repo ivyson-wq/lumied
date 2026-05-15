@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Marketplace Lumied — Templates de escolas reais</title>
+<meta name="theme-color" content="#6C63FF">
+<link rel="icon" href="/favicon.png">
+<style>
+:root { --purple:#6C63FF; --blue:#3B82F6; --dark:#1a1a1a; --muted:#64748b; --bg:#fafafa; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background: var(--bg); color: var(--dark); }
+header { background: linear-gradient(135deg,var(--purple) 0%, var(--blue) 100%); color:#fff; padding:48px 24px 36px; text-align:center; }
+header h1 { font-size:32px; margin:0 0 8px; font-weight:800; letter-spacing:-0.02em; }
+header p { font-size:15px; opacity:0.92; margin:0 auto; max-width:560px; line-height:1.55; }
+.coming { display:inline-block; background:rgba(255,255,255,0.18); padding:5px 14px; border-radius:20px; font-size:11.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:14px; }
+.container { max-width:1000px; margin:0 auto; padding:36px 20px 60px; }
+.cat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+.cat { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:22px; text-align:center; }
+.cat-icon { font-size:32px; margin-bottom:8px; }
+.cat h3 { font-size:15px; font-weight:800; margin:0 0 6px; }
+.cat p { font-size:13px; color:var(--muted); line-height:1.5; margin:0; }
+.cat-count { display:inline-block; margin-top:10px; background:#f3f0ff; color:var(--purple); padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; }
+.cta-bottom { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:30px; text-align:center; margin-top:30px; }
+.cta-bottom h2 { font-size:18px; margin:0 0 8px; }
+.cta-bottom p { color:var(--muted); font-size:13.5px; line-height:1.55; margin:0 0 16px; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:11px 20px; background:linear-gradient(135deg,var(--purple),var(--blue)); color:#fff; text-decoration:none; border-radius:9px; font-weight:700; font-size:13.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="coming">Em breve · Q3 2027</span>
+  <h1>🛒 Marketplace Lumied</h1>
+  <p>Escolas que descobriram fórmulas que funcionam vão poder compartilhar como templates. Você adapta pra sua realidade em 1 clique.</p>
+</header>
+
+<div class="container">
+  <p style="text-align:center;color:var(--muted);font-size:14px;line-height:1.6;max-width:660px;margin:0 auto 26px">
+    Vai contar com cenários, planos de contas, templates de comunicação, escalas de funcionários, fluxos de avaliação, modelos de contrato — sempre compartilhados pelas próprias escolas, com curadoria do time Lumied.
+  </p>
+
+  <div class="cat-grid">
+    <div class="cat"><div class="cat-icon">💰</div><h3>Planos de Conta</h3><p>Estruturas contábeis BR (NBC ITG 1000) já testadas por outras escolas.</p><span class="cat-count">12 prévios</span></div>
+    <div class="cat"><div class="cat-icon">📚</div><h3>Currículos</h3><p>Grades por série, disciplinas Maple Bear/BNCC, BPC, Cambridge.</p><span class="cat-count">8 prévios</span></div>
+    <div class="cat"><div class="cat-icon">📋</div><h3>Contratos</h3><p>Modelos de matrícula, termos LGPD, autorizações, recibos.</p><span class="cat-count">15 prévios</span></div>
+    <div class="cat"><div class="cat-icon">💬</div><h3>Comunicações</h3><p>Templates de e-mail/WhatsApp pra cobrança, avisos, eventos.</p><span class="cat-count">22 prévios</span></div>
+    <div class="cat"><div class="cat-icon">🍽️</div><h3>Cardápios</h3><p>Cardápios semanais aprovados por nutricionistas, com alergias mapeadas.</p><span class="cat-count">6 prévios</span></div>
+    <div class="cat"><div class="cat-icon">📦</div><h3>Catálogos Almox</h3><p>Listas de insumos por porte de escola (50, 200, 500 alunos).</p><span class="cat-count">4 prévios</span></div>
+    <div class="cat"><div class="cat-icon">⏰</div><h3>Escalas de Ponto</h3><p>Modelos CLT por papel + ajustes regionais (RS, SP, etc.).</p><span class="cat-count">10 prévios</span></div>
+    <div class="cat"><div class="cat-icon">🎯</div><h3>Playbooks Comerciais</h3><p>Régua de cobrança que funciona, scripts de captação, etc.</p><span class="cat-count">5 prévios</span></div>
+  </div>
+
+  <div class="cta-bottom">
+    <h2>Quer contribuir?</h2>
+    <p>Se sua escola já tem material pronto e quer ajudar outras, fale com a gente. Templates publicados ganham crédito e divulgação.</p>
+    <a class="btn" href="https://wa.me/5554997021634?text=Tenho%20interesse%20em%20contribuir%20com%20templates%20para%20o%20Marketplace%20Lumied" target="_blank">💬 Falar no WhatsApp</a>
+  </div>
+</div>
+
+<script src="/config.js"></script>
+<script src="/product-events.js" defer></script>
+<script>
+  setTimeout(function() {
+    if (window.trackProductEvent) window.trackProductEvent('marketing.marketplace.visualizada', { fonte: 'marketplace.html' });
+  }, 1500);
+</script>
+
+</body>
+</html>
