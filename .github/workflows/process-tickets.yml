@@ -7,31 +7,88 @@ on:
       - '.github/workflows/process-tickets.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   SUPABASE_PROJECT_REF: brgorknbrjlfwvrrlwxj
   SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  API: https://api.supabase.com/v1/projects/brgorknbrjlfwvrrlwxj/database/query
 
 jobs:
   process:
-    name: Acionar ticket-resolver via SQL
+    name: Processar tickets de suporte
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger ticket_resolver_if_needed()
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Instalar jq
+        run: sudo apt-get install -y jq
+
+      - name: Contar tickets abertos
+        id: count
         run: |
           set -euo pipefail
-          curl -sf -X POST \
-            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
-            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d '{"query":"SELECT public.ticket_resolver_if_needed()"}' \
+          COUNT=$(jq -n '{query:"SELECT count(*)::int AS n FROM tickets WHERE status = $$aberto$$"}' \
+            | curl -sf -X POST "${API}" \
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d @- \
+            | jq -r '.[0].n // 0')
+          echo "count=${COUNT}" >> "$GITHUB_OUTPUT"
+          echo "Tickets abertos: ${COUNT}"
+
+      - name: Listar tickets abertos (antes)
+        if: steps.count.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          jq -n '{query:"SELECT numero, email, portal, tipo, LEFT(descricao,100) AS resumo FROM tickets WHERE status = $$aberto$$ ORDER BY criado_em ASC"}' \
+            | curl -sf -X POST "${API}" \
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d @- \
+            | jq -r '.[] | "#\(.numero) [\(.portal)] \(.email) | \(.resumo)"
+            '
+
+      - name: Acionar ticket_resolver_if_needed()
+        if: steps.count.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          jq -n '{query:"SELECT public.ticket_resolver_if_needed()"}' \
+            | curl -sf -X POST "${API}" \
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d @- \
             | jq .
 
-      - name: Listar tickets abertos (diagnóstico)
+      - name: Aguardar processamento da edge function (90s)
+        if: steps.count.outputs.count != '0'
+        run: sleep 90
+
+      - name: Gerar relatório de tickets
         run: |
           set -euo pipefail
-          curl -sf -X POST \
-            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
-            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d '{"query":"SELECT numero, email, portal, tipo, LEFT(descricao,80) AS descricao_resumo, status, criado_em FROM tickets ORDER BY criado_em DESC LIMIT 20"}' \
-            | jq -r 'if length == 0 then "Nenhum ticket." else .[] | "#\(.numero) [\(.status)] \(.portal) | \(.email) | \(.descricao_resumo)" end'
+          REPORT=$(jq -n '{query:"SELECT id, numero, email, nome, portal, tipo, LEFT(descricao,300) AS descricao, status, resposta, tratamento, respondido_por, criado_em, atualizado_em FROM tickets ORDER BY atualizado_em DESC LIMIT 30"}' \
+            | curl -sf -X POST "${API}" \
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d @-)
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          mkdir -p .github
+          jq -n --arg ts "$TIMESTAMP" --argjson data "$REPORT" \
+            '{run_at: $ts, tickets: $data}' > .github/ticket-report.json
+          echo "--- Relatório ---"
+          cat .github/ticket-report.json | jq -r '.tickets[] | "#\(.numero) [\(.status)] \(.portal) | \(.email) | resp: \(.respondido_por // "-")"
+          '
+
+      - name: Commit relatório
+        run: |
+          git config user.name "lumied-bot"
+          git config user.email "bot@lumied.com.br"
+          git pull --rebase origin main
+          git add .github/ticket-report.json
+          git diff --staged --quiet && echo 'sem alterações' && exit 0
+          git commit -m "chore: relatório de tickets $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+          git push origin main
