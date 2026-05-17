@@ -2,12 +2,15 @@
   "private": true,
   "scripts": {
     "build": "node build.js",
-    "test": "npx deno-bin test supabase/functions/__tests__/ --allow-net --allow-read --allow-env"
+    "test": "npx deno-bin test supabase/functions/__tests__/ --allow-net --allow-read --allow-env",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "esbuild": "^0.27.7",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "^4.92.0"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.0",

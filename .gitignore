@@ -10,3 +10,9 @@ node_modules/
 supabase/.temp/
 .vercel
 test-results/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
